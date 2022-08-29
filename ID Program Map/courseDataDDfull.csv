@@ -1,0 +1,43 @@
+code,name,year,column,points,option,number,prerequisits,equivalents
+OENG1166,Introduction to Professional Engineering Practice,1,1,12,1,1,,
+GRAP1049,Industrial Design Drawing,1,2,12,1,1,,
+GRAP1041,Design in Society,1,3,12,1,1,,
+MANU2488,Advanced Manufacturing and Mechatronics,1,4,12,1,1,,
+GRAP1052,Design Prototyping,1,2,12,1,1,,
+GRAP1050,Computer Aided Industrial Design,1,5,12,1,1,,
+MATH2393,Engineering Mathematics,1,6,12,1,1,,
+MIET2514,Introduction to Mechanical and Automotive Engineering,1,7,12,1,1,,
+GRAP1031,User Centred Design Studio,1,8,12,1,2,,GRAP1032
+GRAP1032,Design for Sustainability,1,8,12,2,2,,GRAP1031
+MIET2134,Engineering Dynamics,2,1,12,1,1,,
+MIET2422,Fluid Mechanics of Mechanical Systems,2,2,12,1,1,,
+OENG1208,Engineering Science,2,3,12,1,1,,
+MATH2414,Advanced Mathematics for Engineers,2,4,12,1,1,,
+MIET2136,Mechanical Design 1,2,5,12,1,1,,
+MIET2421,Applied Thermodynamics,2,6,12,1,1,,
+GRAP1033,Design Studio: Materiality,2,7,24,1,2,GRAP1031 GRAP1032,GRAP1034
+GRAP1034,Design Studio: Speculative,2,7,24,2,2,GRAP1031 GRAP1032,GRAP1033
+GRAP1042,Industral Design Ecologies,2,9,12,1,1,,
+MIET2062,Renewable Energy Systems,3,1,12,1,1,,GRAP1045 GRAP2923
+MIET2115,Mechanics and Materials 2,3,2,12,1,1,,GRAP1045 GRAP2923
+MIET2370,Mechatronics Principles,3,3,12,1,1,,GRAP1045 GRAP2923
+MIET2515,Thermal-Fluid System Design,3,4,12,1,1,,GRAP1045 GRAP2923
+GRAP1035,Design Studio: Social,3,5,24,1,1,GRAP1031 GRAP1032,
+GRAP1043,Industrial Design Tactics,3,7,12,1,3,,GRAP1045 GRAP2923
+GRAP1045,Contemporary Industrial Design Enterprise,3,7,12,2,3,,GRAP1043 GRAP2923
+GRAP2923,Professional Ethics and Design Strategy,3,7,12,3,3,,GRAP1043 GRAP1045
+,Industrial Design Program Elective,3,8,12,1,1,,
+MIET1081,Heat Transfer,4,1,12,1,1,,GRAP1045 GRAP2923
+MIET1071,Solid Mechanics 3,4,2,12,1,1,,GRAP1045 GRAP2923
+MIET1076,Mechanical Vibrations,4,3,12,1,1,,GRAP1045 GRAP2923
+GRAP2221,Design Studio: Digital,4,4,24,1,1,GRAP1031 GRAP1032,
+MIET1077,Mechanics of Machines,4,6,12,1,1,,GRAP1045 GRAP2923
+MIET1084,Finite Element Analysis,4,7,12,1,1,,GRAP1045 GRAP2923
+MIET1068,Mechanical Design 2,4,8,12,1,1,,GRAP1045 GRAP2923
+GRAP2225,Methods in Design Research and Practice,4,9,12,1,1,,
+EEET2449,Research Methods for Engineers,5,1,12,1,1,GRAP2225 GRAP2221 GRAP1035 GRAP1034 GRAP1033,
+GRAP2935,Industrial Design Honours Project Part 1,5,2,24,1,1,GRAP2225 GRAP2221 GRAP1035 GRAP1034 GRAP1033,
+GRAP2939,Industrial Design Honours Reflection and Exposition,5,4,12,1,1,GRAP2225 GRAP2221 GRAP1035 GRAP1034 GRAP1033,
+GRAP2930,Industrial Design Honours Project Part 2,5,5,24,1,1,GRAP2935,
+MIET2534,Engineering and Enterprise,5,7,12,1,1,GRAP2225 GRAP2221 GRAP1035 GRAP1034 GRAP1033,
+,Engineering Program Elective,5,8,12,1,1,,
