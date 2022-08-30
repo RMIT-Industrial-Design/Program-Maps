@@ -7,6 +7,7 @@ let numYears;
 
 function preload() {
   courseData = loadTable("courseData.csv", "csv", "header");
+  print(courseData);
 }
 
 function setup() {
