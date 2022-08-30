@@ -8,11 +8,10 @@ let numYears;
 
 function preload() {
   courseData = loadTable("courseData.csv", "csv", "header");
-  print(courseData);
 }
 
 function setup() {
-  createCanvas(1000, 800);
+  createCanvas(1000, 550);
   
   loadCourseDetails();
   
