@@ -86,7 +86,7 @@ function loadCourseDetails() {
       tableWidth
     );
   }
-  print(courses);
+  // print(courses);
 }
 
 function drawYearLabels(years, rHeight, tOffset, rPadding, cPadding) {
@@ -124,7 +124,7 @@ function updateAvailableCourses() {
     // check the prerequisits
     if (courses[i].prereqs == null) {
       // no perreqs so if not available make it available
-      eligible = true;
+      avail = true;
     } else {
       // check each of the prerequs
       let thePrereqs = courses[i].prereqs;
