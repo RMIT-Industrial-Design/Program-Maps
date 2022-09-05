@@ -22,7 +22,7 @@ function preload() {
 }
 
 function setup() {
-  createCanvas(1200, 1120);
+  createCanvas(1100, 800);
 
   loadCourseDetails();
 
