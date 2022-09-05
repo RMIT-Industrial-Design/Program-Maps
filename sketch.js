@@ -136,7 +136,6 @@ function updateAvailableCourses() {
         let multiplePrereq = split(prereqCourse, '||');
         for (let m = 0; m < multiplePrereq.length; m++){
           let theCourse = multiplePrereq[m];
-          print(theCourse);
           // look for the prereq in completed courses
           for (let k = 0; k < courses.length; k++) {
             if (courses[k].code == theCourse && (courses[k].status == COMPLETED || courses[k].status == EQUIVALENT)) {
