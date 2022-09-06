@@ -1,0 +1,44 @@
+﻿code,name,year,column,points,option,number,prerequisits,equivalents
+MATH2393,Engineering Mathematics,1,1,12,1,1,,
+OENG1166,Introduction to Professional Engineering Practice,1,2,12,1,1,,
+GRAP1049,Industrial Design Drawing,1,3,12,1,1,,
+GRAP1041,"Design in Society: Histories, Politics and Contexts of Application",1,4,12,1,1,,
+OENG1208,Engineering Science,1,5,12,1,1,,
+GRAP1052,"Design Prototyping: Materials, Processes and Experimentation",1,6,12,1,1,,
+GRAP1050,Computer Aided Industrial Design,1,7,12,1,1,,
+MIET2514,Introduction to Mechanical and Automotive Engineering,1,8,12,1,1,,
+GRAP1031,User Centred Design Studio,1,9,12,1,2,,GRAP1032
+GRAP1032,Design for Sustainability,1,9,12,2,2,,GRAP1031
+PROC2128,Introduction to Chemical Engineering,2,1,12,1,1,,
+MATH2114,Numerical Methods/Statistics for Engineers,2,2,12,1,1,MATH2393,
+OENG1206,Digital Fundamentals,2,3,12,1,1,,
+MIET2115,Mechanics and Materials 2,2,4,12,1,1,,
+CIVE1186,Introduction to Environmental and Sustainable Systems Engineering,2,5,12,1,1,,
+MIET2422,Fluid Mechanics of Mechanical Systems,2,6,12,1,1,,
+GRAP1033,Design Studio: Materiality,2,7,24,1,2,GRAP1031 GRAP1032,GRAP1034
+GRAP1034,Design Studio: Speculative,2,7,24,2,2,GRAP1031 GRAP1032,GRAP1033
+GRAP1042,Industral Design Ecologies,2,9,12,1,1,,
+MIET2383,Sustainable Systems Design,3,1,12,1,1,,
+MIET2385,Systems Engineering Principles,3,2,12,1,1,,
+EEET2249,Introduction to Electrical and Electronic Engineering,3,3,12,1,1,,
+AUTO1928,Sustainable Transport Systems,3,4,12,1,1,,
+AUTO1929,Intelligent Transport Systems,3,5,12,1,1,AUTO1928,
+GRAP1035,Design Studio: Social,3,6,24,1,1,GRAP1031 GRAP1032,
+GRAP1043,Industrial Design Tactics,3,8,12,1,3,GRAP1032||GRAP1031,GRAP1045 GRAP2923
+GRAP1045,Contemporary Industrial Design Enterprise,3,8,12,2,3,GRAP1032||GRAP1031,GRAP1043 GRAP2923
+GRAP2923,Professional Ethics and Design Strategy,3,8,12,3,3,GRAP1032||GRAP1031,GRAP1043 GRAP1045
+,Industrial Design Program Elective,3,9,12,1,1,,
+MIET2381,Sustainable Engineering Materials,4,1,12,1,1,,
+MIET2421,Applied Thermodynamics,4,2,12,1,1,,
+MIET2384,Advanced Life Cycle and Systems Assessment,4,3,12,1,1,,
+MIET1081,Heat Transfer,4,4,12,1,1,MIET2421 MIET2422,
+MIET2039,Applied Heat and Mass Transfer,4,5,12,1,1,MIET1081,
+GRAP2221,Design Studio: Digital,4,6,24,1,1,GRAP1031 GRAP1032,
+GRAP2225,Methods in Design Research and Practice,4,8,12,1,1,GRAP2221||GRAP1035,
+,University Elective,4,9,12,1,1,,
+GRAP2935,Industrial Design Honours Project Part 1,5,1,24,1,1,GRAP2225 GRAP2221 GRAP1035 GRAP1034 GRAP1033,
+GRAP2939,Industrial Design Honours Reflection and Exposition,5,3,12,1,1,GRAP2225 GRAP2221 GRAP1035 GRAP1034 GRAP1033,
+GRAP2930,Industrial Design Honours Project Part 2,5,4,24,1,1,GRAP2935,
+,Program Elective,5,6,12,1,1,GRAP2225 GRAP2221 GRAP1035 GRAP1034 GRAP1033,
+,Program Elective,5,7,12,1,1,OENG1166||AERO2248,
+,Program Elective,5,8,12,1,1,,
