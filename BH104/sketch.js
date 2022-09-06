@@ -243,7 +243,7 @@ class Course {
     rect(this.x, this.y, this.cellWidth, this.cellHeight);
     // display course details
     textAlign(CENTER, CENTER);
-    textSize(width / 100);
+    textSize(width / 80);
     fill(50);
     text(
       this.code + "\n" + this.name,
