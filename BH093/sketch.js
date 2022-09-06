@@ -23,8 +23,7 @@ function preload() {
 }
 
 function setup() {
-  // createCanvas(1000, 1420); // for ID
-  createCanvas(1100, 1200); // for DDfull
+  createCanvas(1000, 1420); // for DDfull
 
   loadCourseDetails();
 
