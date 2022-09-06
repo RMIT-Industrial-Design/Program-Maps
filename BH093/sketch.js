@@ -7,7 +7,8 @@
 let courseData;
 let courses = [];
 let tableOffset = 30;
-let rowHeight = 120;
+// let rowHeight = 120; // for ID
+let rowHeight = 220; // for DD full
 let rowPadding = 4;
 let cellPadding = 4;
 let numYears;
@@ -18,11 +19,12 @@ const COMPLETED = 2;
 const EQUIVALENT = 3;
 
 function preload() {
-  courseData = loadTable("courseData.csv", "csv", "header");
+  courseData = loadTable("courseDataDDfull.csv", "csv", "header");
 }
 
 function setup() {
-  createCanvas(1100, 800);
+  // createCanvas(1100, 600); // for ID
+  createCanvas(1100, 1200); // for DDfull
 
   loadCourseDetails();
 
