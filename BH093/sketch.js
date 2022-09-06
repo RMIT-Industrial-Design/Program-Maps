@@ -8,7 +8,7 @@ let courseData;
 let courses = [];
 let tableOffset = 30;
 // let rowHeight = 120; // for ID
-let rowHeight = 220; // for DD full
+let rowHeight = 280; // for DD full
 let rowPadding = 4;
 let cellPadding = 4;
 let numYears;
@@ -23,7 +23,7 @@ function preload() {
 }
 
 function setup() {
-  // createCanvas(1100, 600); // for ID
+  // createCanvas(1000, 1420); // for ID
   createCanvas(1100, 1200); // for DDfull
 
   loadCourseDetails();
@@ -245,7 +245,7 @@ class Course {
     rect(this.x, this.y, this.cellWidth, this.cellHeight);
     // display course details
     textAlign(CENTER, CENTER);
-    textSize(width / 100);
+    textSize(width / 80);
     fill(50);
     text(
       this.code + "\n" + this.name,
