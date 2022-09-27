@@ -28,7 +28,7 @@ const COMPLETED = 2;
 const EQUIVALENT = 3;
 
 function preload() {
-  courseData = loadTable("courseDataBH104.csv", "csv", "header");
+  courseData = loadTable("courseData.csv", "csv", "header");
 }
 
 function setup() {
