@@ -1,7 +1,7 @@
-// v0.10
+// v0.11
 // responds to Caroline's requests
-// Program electives as popup menu
-// Semester headings
+// All subjects as popup menu
+// Semester headings changed
 // sets Canvas size based on number of years in table
 
 let courseData;
@@ -15,7 +15,8 @@ let cellPadding = 4;
 let numYears;
 
 // headings
-let topLabel = "Semester 1 or 2";
+let topLabel1 = "Semester 1";
+let topLabel2 = "Semester 2";
 
 // popup menu
 let courseMenu;
@@ -27,7 +28,7 @@ const COMPLETED = 2;
 const EQUIVALENT = 3;
 
 function preload() {
-  courseData = loadTable("courseData.csv", "csv", "header");
+  courseData = loadTable("courseDataBH104.csv", "csv", "header");
 }
 
 function setup() {
@@ -151,8 +152,8 @@ function drawTopLabels(offsetH, offsetV, rPadding, cPadding) {
   textSize(width / 60);
   fill(10, 10, 10);
   noStroke();
-  text(topLabel, offsetH + cPadding + ((width - (offsetH + cPadding))/2 - cPadding)/2, rPadding + 15);
-  text(topLabel, offsetH + cPadding * 2 + (width - (offsetH + cPadding))/2 - cPadding + ((width - (offsetH + cPadding))/2 - cPadding)/2, rPadding + 15);
+  text(topLabel1, offsetH + cPadding + ((width - (offsetH + cPadding))/2 - cPadding)/2, rPadding + 15);
+  text(topLabel2, offsetH + cPadding * 2 + (width - (offsetH + cPadding))/2 - cPadding + ((width - (offsetH + cPadding))/2 - cPadding)/2, rPadding + 15);
 }
 
 function drawYearLabels(offsetH, offsetV, years, rHeight, rPadding, cPadding) {
