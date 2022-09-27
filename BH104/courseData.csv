@@ -1,17 +1,17 @@
-﻿code,name,year,column,points,option,number,prerequisits,equivalents,menu
-GRAP1041,Design in Society,1,1,12,1,1,,,
-GRAP1052,Design Prototyping,1,2,12,1,1,,,
-GRAP1049,ID Drawing,1,3,12,1,1,,,
-GRAP1031,User Centred Design Studio,1,4,12,1,1,,,
-GRAP1032,Design for Sustainability,1,5,12,1,1,,,
-GRAP1050,Computer Aided Industrial Design,1,6,12,1,1,,,
-GRAP1051,Industrial Design Engineering,1,7,12,1,1,,,
-GRAP1042,Industrial Design Ecologies,1,8,12,1,1,,,
+code,name,year,column,points,option,number,prerequisits,equivalents,menu
+,Design Studies Course,1,1,12,1,1,,,GRAP1041 GRAP1042
+,First Year Subject,1,2,12,1,1,,,GRAP1052 GRAP1049 GRAP1050 GRAP1051
+,First Year Subject,1,3,12,1,1,,,GRAP1052 GRAP1049 GRAP1050 GRAP1051
+,Design Studio,1,4,12,1,1,,,GRAP1031 GRAP1032
+,Design Studio,1,5,12,1,1,,,GRAP1031 GRAP1032
+,First Year Subject,1,6,12,1,1,,,GRAP1052 GRAP1049 GRAP1050 GRAP1051
+,First Year Subject,1,7,12,1,1,,,GRAP1052 GRAP1049 GRAP1050 GRAP1051
+,Design Studies Course,1,8,12,1,1,,,GRAP1041 GRAP1042
 ,Program Elective,2,1,12,1,1,,,GRAP2940 GRAP2941 GRAP2926 GRAP2578 GRAP2572 ARCH1478 ARCH1477 GRAP2571
-GRAP1043,Industrial Design Tactics,2,2,12,1,1,GRAP1041||GRAP1052||GRAP1049||GRAP1031||GRAP1032||GRAP1050||GRAP1051||GRAP1042,,
+,Second Year Subject,2,2,12,1,1,GRAP1041||GRAP1052||GRAP1049||GRAP1031||GRAP1032||GRAP1050||GRAP1051||GRAP1042,,GRAP1043 ARCH1479
 ,Design Studio,2,3,24,1,1,GRAP1031 GRAP1032,,GRAP1033 GRAP1034 GRAP1035 GRAP2221
 ,Design Studio,2,5,24,1,1,GRAP1031 GRAP1032,,GRAP1033 GRAP1034 GRAP1035 GRAP2221
-ARCH1479,Interactive Systems Design,2,7,12,1,1,GRAP1041||GRAP1052||GRAP1049||GRAP1031||GRAP1032||GRAP1050||GRAP1051||GRAP1042,,
+,Second Year Subject,2,7,12,1,1,GRAP1041||GRAP1052||GRAP1049||GRAP1031||GRAP1032||GRAP1050||GRAP1051||GRAP1042,,GRAP1043 ARCH1479
 ,Univeristy or Program Elective,2,8,12,1,1,,,GRAP2940 GRAP2941 GRAP2926 GRAP2578 GRAP2572 ARCH1478 ARCH1477 GRAP2571 University
 ,Program Elective,3,1,12,1,1,,,GRAP2940 GRAP2941 GRAP2926 GRAP2578 GRAP2572 ARCH1478 ARCH1477 GRAP2571
 GRAP1045,Contemporary Industrial Design Enterprise,3,2,12,1,1,GRAP1041||GRAP1052||GRAP1049||GRAP1031||GRAP1032||GRAP1050||GRAP1051||GRAP1042,,
@@ -37,4 +37,14 @@ GRAP2572,Electronic and Interactive Prototyping,,,12,,,,,
 ARCH1478,System and Service Visualisation,,,12,,,,,
 ARCH1477,Computational Prototyping,,,12,,,,,
 GRAP2571,Design Internship,,,12,,,,,
+GRAP1041,Design in Society,,,12,,,,,
+GRAP1042,Industrial Design Ecologies,,,12,,,,,
+GRAP1052,Design Prototyping,,,12,,,,,
+GRAP1049,ID Drawing,,,12,,,,,
+GRAP1050,Computer Aided Industrial Design,,,12,,,,,
+GRAP1051,Industrial Design Engineering,,,12,,,,,
+GRAP1031,User Centred Design Studio,,,12,,,,,
+GRAP1032,Design for Sustainability,,,12,,,,,
+GRAP1043,Industrial Design Tactics,,,12,,,,,
+ARCH1479,Interactive Systems Design,,,12,,,,,
 University,Elective,,,12,,,,,
