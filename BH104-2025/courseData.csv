@@ -1,5 +1,4 @@
 code,name,year,column,points,option,number,prerequisits,equivalents,menu
-,First Year Subject,1,2,12,1,1,,,GRAP1052 GRAP1049 GRAP1050 GRAP1051
 ,First Year Subject,1,3,12,1,1,,,GRAP1052 GRAP1049 GRAP1050 GRAP1051
 ,Design Studio,1,4,12,1,1,,,GRAP1031 GRAP1032
 ,Design Studio,1,5,12,1,1,,,GRAP1031 GRAP1032
@@ -36,11 +35,11 @@ GRAP2572,Electronic and Interactive Prototyping,,,12,,,,,
 ARCH1478,System and Service Visualisation,,,12,,,,,
 ARCH1477,Computational Prototyping,,,12,,,,,
 GRAP2571,Design Internship,,,12,,,,,
-GRAP1041,Design in Society,,,12,,,,,
-GRAP1042,Industrial Design Ecologies,,,12,,,,,
+GRAP1041,Design in Society,1,4,12,1,1,,,
+GRAP1042,Industrial Design Practice,1,5,12,1,1,,,
 GRAP1052,Industrial Design Prototyping 1,1,1,12,1,1,,,
-GRAP1049,ID Drawing,,,12,,,,,
-GRAP1050,Computer Aided Industrial Design,,,12,,,,,
+GRAP1049,Industrial Design Drawing 1,1,2,12,1,1,,,
+GRAP1050,Computer Aided Industrial Design 1,1,3,12,1,1,,,
 GRAP1051,Industrial Design Engineering,,,12,,,,,
 GRAP1031,User Centred Design Studio,,,12,,,,,
 GRAP1032,Design for Sustainability,,,12,,,,,
