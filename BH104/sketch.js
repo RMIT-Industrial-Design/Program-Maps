@@ -431,7 +431,12 @@ class Course {
     tableWidth
   ) {
     this.ref = ref;
+    print(width);
+    print(cPadding);
+    print(offsetH);
+    print(tableWidth);
     let columnWidth = (width - cPadding - offsetH) / tableWidth;
+    print(columnWidth);
     this.cellHeight = rHeight / number - cPadding;
     this.code = code;
     this.name = name;
