@@ -54,7 +54,7 @@ class Major {
         fill(255, 10, 10);
         let yShift = 60;
         text(
-            "Core Courses",
+            "Core Courses (complete all courses)",
             this.x + textPadding,
             this.y + yShift,
             this.columnWidth - 2 * textPadding,
@@ -87,7 +87,7 @@ class Major {
         fill(255, 10, 10);
         yShift += 10;
         text(
-            "Option Courses (complete 4)",
+            "Option Courses (complete " + this.number + ")",
             this.x + textPadding,
             this.y + yShift,
             this.columnWidth - 2 * textPadding,
@@ -118,26 +118,26 @@ class Major {
         }
     }
 
-    clicked(clickX, clickY) {
-        if (
-            clickX > this.x &&
-            clickX < this.x + this.cellWidth &&
-            clickY > this.y &&
-            clickY < this.y + this.cellHeight
-        ) {
-            if (this.menu.length > 0) {
-                if (this.status == AVAILABLE || this.status == COMPLETED) {
-                    courseMenu.update(clickX, clickY, this.menu, this.ref);
-                    menuVisible = true;
-                }
-            } else if (this.status == AVAILABLE || this.status == EQUIVALENT) {
-                this.status = COMPLETED;
-            } else if (this.status == COMPLETED) {
-                this.status = AVAILABLE;
-            }
-            return true;
-        } else {
-            return false;
-        }
-    }
+    // clicked(clickX, clickY) {
+    //     if (
+    //         clickX > this.x &&
+    //         clickX < this.x + this.cellWidth &&
+    //         clickY > this.y &&
+    //         clickY < this.y + this.cellHeight
+    //     ) {
+    //         if (this.menu.length > 0) {
+    //             if (this.status == AVAILABLE || this.status == COMPLETED) {
+    //                 courseMenu.update(clickX, clickY, this.menu, this.ref);
+    //                 menuVisible = true;
+    //             }
+    //         } else if (this.status == AVAILABLE || this.status == EQUIVALENT) {
+    //             this.status = COMPLETED;
+    //         } else if (this.status == COMPLETED) {
+    //             this.status = AVAILABLE;
+    //         }
+    //         return true;
+    //     } else {
+    //         return false;
+    //     }
+    // }
 }
