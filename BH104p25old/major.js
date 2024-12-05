@@ -10,7 +10,7 @@ class Major {
         core,
         options,
         number,
-        numColumns
+        columns
     ) {
         this.ref = ref;
         this.name = name;
