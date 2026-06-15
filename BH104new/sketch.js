@@ -13,17 +13,17 @@ let courseInterface = [];
 
 let canvasWidth = 1000; // Canvas LMS restricts iframe content to 1000
 let canvasMargin = 12;
-let topGap = 54; // room above the grid for Capstone top tab
+let topGap = 60; // room above the grid for Capstone top tab
 let cellPadding = 5;
 let gridCellPadding = 10; // inset between course box and its region edge
 let rectRadius = 8;
 let groupPadding = 2;
-let tabHeight = 44;
+let tabHeight = 50;
 let tabWidthMax = 170;
-let selectorTabHeight = 60; // taller, for three-line selector text
+let selectorTabHeight = 50;
 let selectorTabWidthMax = 240;
 let yearLabelHeight = 36;
-let yearLabelGap = 72; // clear the taller selector tab above the year pills
+let yearLabelGap = 60; // clear the bottom tabs above the year pills
 let tablePadding = 25;
 
 let numYears = 4;
@@ -64,13 +64,13 @@ const colSeparator = [225, 30, 30];
 // rounded, 0 square. A rect with a label has its tab-side corner squared so
 // the tab joins flush with the region.
 const groupRegions = [
-    // Foundation (Y1 col 1)
+    // Foundation (Y1 col 1) — br squared because the tab fills the full bottom edge
     { yearStart: 1, yearEnd: 1, rowStart: 1, rowEnd: 4, colStart: 1, colEnd: 1,
-      color: colFoundation, corners: [1, 1, 1, 0],
+      color: colFoundation, corners: [1, 1, 0, 0],
       label: "Foundation", labelPos: "bottom", labelColor: [40, 50, 110] },
-    // Core (Y1 col 2) — bleeds right to join Studio at the Y1/Y2 boundary
+    // Core (Y1 col 2) — bleeds right to join Studio; br squared (full-width tab)
     { yearStart: 1, yearEnd: 1, rowStart: 1, rowEnd: 4, colStart: 2, colEnd: 2,
-      color: colCore, corners: [1, 0, 1, 0], bleedRight: true,
+      color: colCore, corners: [1, 0, 0, 0], bleedRight: true,
       label: "Core", labelPos: "bottom", labelColor: [120, 100, 30] },
     // Studio (Y2-Y3 rows 1-2) — bleeds left to meet Core
     { yearStart: 2, yearEnd: 3, rowStart: 1, rowEnd: 2, colStart: 1, colEnd: 2,
@@ -79,8 +79,9 @@ const groupRegions = [
     { yearStart: 2, yearEnd: 4, rowStart: 3, rowEnd: 3, colStart: 1, colEnd: 2,
       color: colMajor, corners: [1, 1, 0, 1] },
     // Major part 2: Y4 rows 3-4 column (foot of L), carries the label
+    // br squared because the selector tab fills the full bottom edge
     { yearStart: 4, yearEnd: 4, rowStart: 3, rowEnd: 4, colStart: 1, colEnd: 2,
-      color: colMajor, corners: [0, 1, 1, 0],
+      color: colMajor, corners: [0, 1, 0, 0],
       label: "Major", labelPos: "bottom", labelColor: [40, 50, 110],
       tabSelectorCode: "majorSelect" },
     // Minor (Y2-Y3 row 4)
@@ -95,9 +96,11 @@ const groupRegions = [
 ];
 
 function preload() {
-    programStructure = loadTable("structure.csv", "csv", "header");
-    courseData = loadTable("courses.csv", "csv", "header");
-    majorData = loadTable("majors.csv", "csv", "header");
+    // CSV cache buster — without it, browsers cache the CSVs and edits don't show up
+    let cb = "?t=" + Date.now();
+    programStructure = loadTable("structure.csv" + cb, "csv", "header");
+    courseData = loadTable("courses.csv" + cb, "csv", "header");
+    majorData = loadTable("majors.csv" + cb, "csv", "header");
 }
 
 function setup() {
@@ -111,25 +114,14 @@ function setup() {
 
     loadInterface();
 
-    // size the majors info panel (preserved for now)
-    let maxCourses = 0;
-    numberMajors = 0;
-    for (let i = 0; i < majorData.getRowCount(); i++) {
-        if (majorData.getString(i, "code").substring(0, 5) == "MAJOR") {
-            let numCore = splitTokens(majorData.getString(i, "core")).length;
-            let numOptions = splitTokens(majorData.getString(i, "options")).length;
-            let numCourses = numCore + numOptions;
-            if (numCourses > maxCourses) maxCourses = numCourses;
-            numberMajors++;
-        }
-    }
-    majorsHeight = 100 + maxCourses * 40 + 50;
-
-    let canvasHeight = tableHeight + majorsHeight;
+    let canvasHeight = tableHeight;
     createCanvas(canvasWidth, canvasHeight);
 
     updateAvailableCourses();
     courseMenu = new Menu();
+
+    buildMajorsPanel();
+    updateMajorsPanelHighlights();
 }
 
 function draw() {
@@ -141,7 +133,6 @@ function draw() {
     drawGroupLabels();
     drawYearSeparators();
     drawYearLabels();
-    drawMajors();
     if (menuVisible) {
         courseMenu.show();
     }
@@ -161,6 +152,7 @@ function mousePressed() {
         updateAvailableCourses();
         // a second pass catches cascading changes
         updateAvailableCourses();
+        updateMajorsPanelHighlights();
     }
 }
 
@@ -250,6 +242,9 @@ function groupTab(g) {
     if (isSelector) {
         // both selector tabs share a single width (capped by region width)
         w = selectorTabWidthMax;
+    } else if (r.w < 140) {
+        // narrow column-width regions: tab spans the full region
+        w = r.w;
     } else {
         w = min(tabWidthMax, max(r.w * 0.55, 90));
     }
@@ -333,10 +328,12 @@ function drawGroupLabels() {
 
         if (isSelector) {
             textSize(width / 80);
-            let pad = 4;
+            textAlign(CENTER, TOP);
+            let pad = 3;
             text(labelText, t.x + pad, t.y + pad, t.w - 2 * pad, t.h - 2 * pad);
         } else {
             textSize(width / 65);
+            textAlign(CENTER, CENTER);
             text(labelText, t.x + t.w / 2, t.y + t.h / 2);
         }
     }
@@ -374,86 +371,148 @@ function drawYearLabels() {
     }
 }
 
-function drawMajors() {
-    let columnWidth = (canvasWidth - 2 * canvasMargin) / numberMajors;
-    let textPadding = 8;
-    for (let i = 0; i < majorData.getRowCount(); i++) {
-        if (majorData.getString(i, "code").substring(0, 5) == "MAJOR") {
-            let xLoc = canvasMargin + columnWidth * i;
-            let yLoc = tableHeight;
-            textAlign(LEFT, TOP);
-            textSize(width / 60);
-            fill(225, 30, 30);
-            text(
-                majorData.getString(i, "name"),
-                xLoc + textPadding,
-                yLoc + textPadding,
-                columnWidth - 2 * textPadding,
-                50
-            );
-            textAlign(LEFT);
-            textSize(width / 80);
-            fill(225, 30, 30);
-            let yShift = 60;
-            text(
-                "Core Courses (complete all courses)",
-                xLoc + textPadding,
-                yLoc + yShift,
-                columnWidth - 2 * textPadding,
-                50
-            );
-            let coreCodes = splitTokens(majorData.getString(i, "core"));
-            yShift += 25;
-            for (let code of coreCodes) {
-                let theText = code;
-                fill(130, 160, 255);
-                for (let j = 0; j < courseData.getRowCount(); j++) {
-                    if (courseData.getString(j, "code") == code) {
-                        theText += " " + courseData.getString(j, "name");
-                        break;
-                    }
-                }
-                for (let course of courseInterface) {
-                    if (course.code == code) {
-                        if (course.status == COMPLETED) fill(0, 200, 0);
-                        break;
-                    }
-                }
-                text(theText, xLoc + textPadding, yLoc + yShift, columnWidth - 2 * textPadding, 50);
-                yShift += 40;
-            }
-            let optionCodes = splitTokens(majorData.getString(i, "options"));
-            let numOptions = majorData.getString(i, "number");
-            fill(225, 30, 30);
-            yShift += 10;
-            text(
-                "Option Courses (complete " + numOptions + ")",
-                xLoc + textPadding,
-                yLoc + yShift,
-                columnWidth - 2 * textPadding,
-                50
-            );
-            yShift += 25;
-            for (let option of optionCodes) {
-                let theText = option;
-                fill(130, 160, 255);
-                for (let j = 0; j < courseData.getRowCount(); j++) {
-                    if (courseData.getString(j, "code") == option) {
-                        theText += " " + courseData.getString(j, "name");
-                        break;
-                    }
-                }
-                for (let course of courseInterface) {
-                    if (course.code == option) {
-                        if (course.status == COMPLETED) fill(0, 200, 0);
-                        break;
-                    }
-                }
-                text(theText, xLoc + textPadding, yLoc + yShift, columnWidth - 2 * textPadding, 50);
-                yShift += 40;
-            }
+function courseNameByCode(code) {
+    for (let j = 0; j < courseData.getRowCount(); j++) {
+        if (courseData.getString(j, "code") === code) {
+            return courseData.getString(j, "name");
         }
     }
+    return "";
+}
+
+function makeCourseLi(code) {
+    let li = document.createElement("li");
+    li.className = "course";
+    li.dataset.code = code;
+    let codeSpan = document.createElement("span");
+    codeSpan.className = "code";
+    codeSpan.textContent = code;
+    let nameSpan = document.createElement("span");
+    nameSpan.className = "name";
+    nameSpan.textContent = courseNameByCode(code);
+    li.appendChild(codeSpan);
+    li.appendChild(nameSpan);
+    return li;
+}
+
+function findMajorDataIdx(code) {
+    for (let j = 0; j < majorData.getRowCount(); j++) {
+        if (majorData.getString(j, "code") === code) return j;
+    }
+    return -1;
+}
+
+function buildMajorsPanel() {
+    // If a minor shares a name with one of the majors, that column substitutes
+    // the minor's content. (MINOR5 / OPEN2 / UNIELECTIVES don't match any
+    // major name and so are not shown in the panel.)
+    let minorBox = (typeof getTabSelectorBox === "function") ? getTabSelectorBox("minorSelect") : null;
+    let selectedMinorCode = (minorBox && minorBox.code && minorBox.code !== "minorSelect") ? minorBox.code : null;
+    let selectedMinorName = "";
+    if (selectedMinorCode) {
+        let idx = findMajorDataIdx(selectedMinorCode);
+        if (idx >= 0) selectedMinorName = majorData.getString(idx, "name");
+    }
+
+    let container = document.querySelector("main") || document.body;
+    let panel = document.getElementById("majors-panel");
+    if (!panel) {
+        panel = document.createElement("div");
+        panel.id = "majors-panel";
+        container.appendChild(panel);
+    }
+    panel.innerHTML = "";
+
+    for (let i = 0; i < majorData.getRowCount(); i++) {
+        let majorCode = majorData.getString(i, "code");
+        if (majorCode.substring(0, 5) !== "MAJOR") continue;
+        let majorName = majorData.getString(i, "name");
+
+        // Decide whose content this column should render
+        let displayIdx = i;
+        let isMinor = false;
+        if (selectedMinorName && majorName === selectedMinorName) {
+            let minorIdx = findMajorDataIdx(selectedMinorCode);
+            if (minorIdx >= 0) { displayIdx = minorIdx; isMinor = true; }
+        }
+        let displayCode = majorData.getString(displayIdx, "code");
+
+        let col = document.createElement("div");
+        col.className = "major-column" + (isMinor ? " as-minor" : "");
+        col.dataset.code = displayCode;
+
+        let nameEl = document.createElement("h3");
+        nameEl.className = "major-name";
+        nameEl.textContent = majorData.getString(displayIdx, "name");
+        col.appendChild(nameEl);
+
+        let coreCodes = splitTokens(majorData.getString(displayIdx, "core"));
+        let coreHeader = document.createElement("p");
+        coreHeader.className = "section-header";
+        coreHeader.textContent = isMinor
+            ? "Minor Courses (complete any 4)"
+            : "Major Core Courses (complete all courses)";
+        col.appendChild(coreHeader);
+
+        let coreList = document.createElement("ul");
+        coreList.className = "course-list";
+        for (let c of coreCodes) coreList.appendChild(makeCourseLi(c));
+        col.appendChild(coreList);
+
+        let optionCodes = splitTokens(majorData.getString(displayIdx, "options"));
+        if (optionCodes.length > 0) {
+            let optHeader = document.createElement("p");
+            optHeader.className = "section-header";
+            optHeader.textContent =
+                "Major Optional Courses (complete any " +
+                majorData.getString(displayIdx, "number") + ")";
+            col.appendChild(optHeader);
+
+            let optList = document.createElement("ul");
+            optList.className = "course-list";
+            for (let c of optionCodes) optList.appendChild(makeCourseLi(c));
+            col.appendChild(optList);
+        }
+
+        panel.appendChild(col);
+    }
+}
+
+let panelLastMajorCode = null;
+let panelLastMinorCode = null;
+
+function updateMajorsPanelHighlights() {
+    let majorBox = (typeof getTabSelectorBox === "function") ? getTabSelectorBox("majorSelect") : null;
+    let minorBox = (typeof getTabSelectorBox === "function") ? getTabSelectorBox("minorSelect") : null;
+    let selectedMajor = (majorBox && majorBox.code && majorBox.code !== "majorSelect") ? majorBox.code : null;
+    let selectedMinor = (minorBox && minorBox.code && minorBox.code !== "minorSelect") ? minorBox.code : null;
+
+    // Rebuild the panel only when the major/minor selection has changed
+    if (selectedMajor !== panelLastMajorCode || selectedMinor !== panelLastMinorCode) {
+        panelLastMajorCode = selectedMajor;
+        panelLastMinorCode = selectedMinor;
+        buildMajorsPanel();
+    }
+
+    let panel = document.getElementById("majors-panel");
+    if (!panel) return;
+
+    let completed = new Set();
+    for (let c of courseInterface) {
+        if (c && c.status === COMPLETED && c.code) completed.add(c.code);
+    }
+    panel.querySelectorAll(".course[data-code]").forEach(el => {
+        el.classList.toggle("completed", completed.has(el.dataset.code));
+    });
+
+    // A column matches whichever code it's currently showing — major code by
+    // default, minor code when substituted.
+    panel.querySelectorAll(".major-column").forEach(col => {
+        let code = col.dataset.code;
+        let selected = (selectedMajor && code === selectedMajor) ||
+                       (selectedMinor && code === selectedMinor);
+        col.classList.toggle("selected", selected);
+    });
 }
 
 function updateAvailableCourses() {

@@ -25,6 +25,24 @@ class Menu {
         let longestName = 0;
         // for majors and minors
         if (this.clickType == "major" || this.clickType == "minor") {
+            // Grey out the item that duplicates the complementary selection by name
+            // (e.g. if MAJOR1 "Design for Sustainability" is the chosen major, the
+            // MINOR with the same name shouldn't be picked as a minor). OPEN1/OPEN2
+            // share the name "Open" but represent independent open slots, so skip
+            // the exclusion for OPEN codes.
+            let excludeName = "";
+            let complementCode = this.clickType == "major" ? "minorSelect" : "majorSelect";
+            let complementBox = (typeof getTabSelectorBox === "function") ? getTabSelectorBox(complementCode) : null;
+            if (complementBox && complementBox.code &&
+                (complementBox.code.startsWith("MAJOR") || complementBox.code.startsWith("MINOR"))) {
+                for (let j = 0; j < majorData.getRowCount(); j++) {
+                    if (majorData.getString(j, "code") == complementBox.code) {
+                        excludeName = majorData.getString(j, "name");
+                        break;
+                    }
+                }
+            }
+
             for (let i = 0; i < codes.length; i++) {
                 this.codes[i] = codes[i];
                 this.type[i] = type;
@@ -38,8 +56,13 @@ class Menu {
                         break;
                     }
                 }
-                if (this.names[i] == "") this.avail[i] = false;
-                else this.avail[i] = true;
+                if (this.names[i] == "") {
+                    this.avail[i] = false;
+                } else if (excludeName !== "" && this.names[i] === excludeName) {
+                    this.avail[i] = false;
+                } else {
+                    this.avail[i] = true;
+                }
             }
         } else {
             // for regular courses
@@ -208,11 +231,27 @@ class Menu {
                                 }
                             }
                             if (theType == "major") {
-                                // search the course data for MAJOR menu references and update with the major selection
+                                // also collect the chosen major's option list, and build a
+                                // combined core+options list for the Y4 Major Option slots
+                                let optionsMenu = [];
+                                for (let j = 0; j < majorData.getRowCount(); j++) {
+                                    if (majorData.getString(j, "code") == theCode) {
+                                        optionsMenu = splitTokens(majorData.getString(j, "options"));
+                                        break;
+                                    }
+                                }
+                                let combinedMenu = newMenu.concat(optionsMenu);
+                                // search the course data for MAJOR / MAJOR-OPT menu references
+                                // and update with the major selection
                                 for (let j = 0; j < programStructure.getRowCount(); j++) {
-                                    if (programStructure.getString(j, "menu") == "MAJOR") {
+                                    let menuTag = programStructure.getString(j, "menu");
+                                    if (menuTag == "MAJOR") {
                                         courseInterface[j].menu = newMenu;
-                                        // reset interface item
+                                        courseInterface[j].code = programStructure.getString(j, "code");
+                                        courseInterface[j].name = programStructure.getString(j, "name");
+                                        courseInterface[j].status = AVAILABLE;
+                                    } else if (menuTag == "MAJOR-OPT") {
+                                        courseInterface[j].menu = combinedMenu;
                                         courseInterface[j].code = programStructure.getString(j, "code");
                                         courseInterface[j].name = programStructure.getString(j, "name");
                                         courseInterface[j].status = AVAILABLE;
