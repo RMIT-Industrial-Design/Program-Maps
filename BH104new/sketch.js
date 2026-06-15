@@ -497,12 +497,45 @@ function updateMajorsPanelHighlights() {
     let panel = document.getElementById("majors-panel");
     if (!panel) return;
 
-    let completed = new Set();
-    for (let c of courseInterface) {
-        if (c && c.status === COMPLETED && c.code) completed.add(c.code);
+    // Split completions by where they were taken: courses completed via a
+    // Major slot (menu MAJOR or MAJOR-OPT in structure.csv) count toward the
+    // major; courses completed via a Minor slot (menu MINOR) count toward the
+    // minor. A course can't double-count toward both.
+    let majorCompleted = new Set();
+    let minorCompleted = new Set();
+    for (let i = 0; i < courseInterface.length; i++) {
+        let c = courseInterface[i];
+        if (!c || c.status !== COMPLETED || !c.code) continue;
+        let menuTag = programStructure.getString(i, "menu");
+        if (menuTag === "MAJOR" || menuTag === "MAJOR-OPT") {
+            majorCompleted.add(c.code);
+        } else if (menuTag === "MINOR") {
+            minorCompleted.add(c.code);
+        }
     }
+
+    // OPEN escapes the per-column scoping: the chosen major/minor doesn't
+    // pin highlights to a specific column, so paint major-bucket courses
+    // across every column where they appear (and likewise for minors).
+    let majorIsOpen = selectedMajor === "OPEN1";
+    let minorIsOpen = selectedMinor === "OPEN2";
+
     panel.querySelectorAll(".course[data-code]").forEach(el => {
-        el.classList.toggle("completed", completed.has(el.dataset.code));
+        let col = el.closest(".major-column");
+        let isMinorColumn = col.classList.contains("as-minor");
+        let colCode = col.dataset.code;
+        let code = el.dataset.code;
+
+        let highlight = false;
+        if (majorCompleted.has(code)) {
+            if (majorIsOpen) highlight = true;
+            else if (!isMinorColumn && colCode === selectedMajor) highlight = true;
+        }
+        if (minorCompleted.has(code)) {
+            if (minorIsOpen) highlight = true;
+            else if (isMinorColumn && colCode === selectedMinor) highlight = true;
+        }
+        el.classList.toggle("completed", highlight);
     });
 
     // A column matches whichever code it's currently showing — major code by
