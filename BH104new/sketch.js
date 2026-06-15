@@ -1,33 +1,45 @@
-// v0.11
-// responds to Caroline's requests
-// All subjects as popup menu
-// Semester headings changed
-// sets Canvas size based on number of years in table
+// v0.12
+// Layout rewrite: years run horizontally across the canvas.
+// Group regions (Foundation, Core, Studio, Major, Minor, Capstone) are
+// hardcoded coloured backgrounds. Year labels are red pills at the bottom,
+// with dashed red vertical separators between years.
+// majorSelect / minorSelect buttons live in a thin top bar.
+// The majors info panel below the grid is preserved (to be revisited).
 
 let programStructure;
 let courseData;
 let majorData;
 let courseInterface = [];
-let tableOffsetH = 30;
-let tableOffsetV = 45;
-let rowHeight = 120;
-let rowPadding = 4;
-let cellPadding = 6;
+
+let canvasWidth = 1000; // Canvas LMS restricts iframe content to 1000
+let canvasMargin = 12;
+let topGap = 54; // room above the grid for Capstone top tab
+let cellPadding = 5;
+let gridCellPadding = 10; // inset between course box and its region edge
+let rectRadius = 8;
+let groupPadding = 2;
+let tabHeight = 44;
+let tabWidthMax = 170;
+let selectorTabHeight = 60; // taller, for three-line selector text
+let selectorTabWidthMax = 240;
+let yearLabelHeight = 36;
+let yearLabelGap = 72; // clear the taller selector tab above the year pills
 let tablePadding = 25;
-let textRowHeight = 50;
-let rectRadius = 6;
-let numYears;
+
+let numYears = 4;
+let rowsPerYear = 4;
+let rowHeight = 105;
+
+let yearColumnWidth;
+let subColumnWidth;
+let gridTop;
+let gridBottom;
+let yearLabelTop;
+let yearLabelBottom;
 let tableHeight;
-let columnWidth;
 let numberMajors;
 let majorsHeight;
-let canvasWidth = 1000; // the Canvas LMS restricts iframe content to 1000
 
-// headings
-let topLabel1 = "Semester 1";
-let topLabel2 = "Semester 2";
-
-// popup menu
 let courseMenu;
 let menuVisible = false;
 
@@ -36,6 +48,52 @@ const AVAILABLE = 1;
 const COMPLETED = 2;
 const EQUIVALENT = 3;
 
+const colFoundation = [208, 212, 232];
+const colCore = [252, 232, 130];
+const colStudio = [252, 232, 130];
+const colMajor = [208, 212, 232];
+const colMinor = [220, 220, 220];
+const colCapstone = [225, 30, 30];
+const colYearPill = [225, 30, 30];
+const colYearPillText = [255, 255, 255];
+const colSeparator = [225, 30, 30];
+
+// Group regions span year ranges (yearStart..yearEnd). Each region is one
+// rectangle; the L-shaped Major region is composed of two adjacent rects whose
+// shared edges have corner = 0. `corners` is [tl, tr, br, bl] flags — 1
+// rounded, 0 square. A rect with a label has its tab-side corner squared so
+// the tab joins flush with the region.
+const groupRegions = [
+    // Foundation (Y1 col 1)
+    { yearStart: 1, yearEnd: 1, rowStart: 1, rowEnd: 4, colStart: 1, colEnd: 1,
+      color: colFoundation, corners: [1, 1, 1, 0],
+      label: "Foundation", labelPos: "bottom", labelColor: [40, 50, 110] },
+    // Core (Y1 col 2) — bleeds right to join Studio at the Y1/Y2 boundary
+    { yearStart: 1, yearEnd: 1, rowStart: 1, rowEnd: 4, colStart: 2, colEnd: 2,
+      color: colCore, corners: [1, 0, 1, 0], bleedRight: true,
+      label: "Core", labelPos: "bottom", labelColor: [120, 100, 30] },
+    // Studio (Y2-Y3 rows 1-2) — bleeds left to meet Core
+    { yearStart: 2, yearEnd: 3, rowStart: 1, rowEnd: 2, colStart: 1, colEnd: 2,
+      color: colStudio, corners: [0, 1, 1, 0], bleedLeft: true },
+    // Major part 1: row-3 strip across Y2-Y4 (top of L)
+    { yearStart: 2, yearEnd: 4, rowStart: 3, rowEnd: 3, colStart: 1, colEnd: 2,
+      color: colMajor, corners: [1, 1, 0, 1] },
+    // Major part 2: Y4 rows 3-4 column (foot of L), carries the label
+    { yearStart: 4, yearEnd: 4, rowStart: 3, rowEnd: 4, colStart: 1, colEnd: 2,
+      color: colMajor, corners: [0, 1, 1, 0],
+      label: "Major", labelPos: "bottom", labelColor: [40, 50, 110],
+      tabSelectorCode: "majorSelect" },
+    // Minor (Y2-Y3 row 4)
+    { yearStart: 2, yearEnd: 3, rowStart: 4, rowEnd: 4, colStart: 1, colEnd: 2,
+      color: colMinor, corners: [1, 1, 1, 0],
+      label: "Minor", labelPos: "bottom", labelColor: [80, 80, 80],
+      tabSelectorCode: "minorSelect" },
+    // Capstone (Y4 rows 1-2) — top tab
+    { yearStart: 4, yearEnd: 4, rowStart: 1, rowEnd: 2, colStart: 1, colEnd: 2,
+      color: colCapstone, corners: [0, 1, 1, 1],
+      label: "Capstone", labelPos: "top", labelColor: [255, 255, 255] },
+];
+
 function preload() {
     programStructure = loadTable("structure.csv", "csv", "header");
     courseData = loadTable("courses.csv", "csv", "header");
@@ -43,13 +101,17 @@ function preload() {
 }
 
 function setup() {
-    // get dimensions of table
-    numYears = max(programStructure.getColumn("year"));
-    let numColumns = max(programStructure.getColumn("column"));
-    columnWidth = (canvasWidth - cellPadding - tableOffsetH) / numColumns;
-    // load course data into the interface
-    tableHeight = loadInterface();
-    // calculate space needed below the table
+    yearColumnWidth = (canvasWidth - 2 * canvasMargin) / numYears;
+    subColumnWidth = yearColumnWidth / 2;
+    gridTop = canvasMargin + topGap;
+    gridBottom = gridTop + rowsPerYear * rowHeight;
+    yearLabelTop = gridBottom + yearLabelGap;
+    yearLabelBottom = yearLabelTop + yearLabelHeight;
+    tableHeight = yearLabelBottom + tablePadding;
+
+    loadInterface();
+
+    // size the majors info panel (preserved for now)
     let maxCourses = 0;
     numberMajors = 0;
     for (let i = 0; i < majorData.getRowCount(); i++) {
@@ -61,38 +123,25 @@ function setup() {
             numberMajors++;
         }
     }
-    majorsHeight = maxCourses * textRowHeight;
-    // make the Canvas
-    let canvasHeight = tableHeight + tablePadding + majorsHeight;
+    majorsHeight = 100 + maxCourses * 40 + 50;
+
+    let canvasHeight = tableHeight + majorsHeight;
     createCanvas(canvasWidth, canvasHeight);
 
-    // set the available courses based on prerequisite data
     updateAvailableCourses();
-
-    // create a menu object
     courseMenu = new Menu();
 }
 
 function draw() {
     background(255);
-    // draw top labels
-    drawTopLabels(tableOffsetH, tableOffsetV, rowPadding, cellPadding);
-    // draw year labels
-    drawYearLabels(
-        tableOffsetH,
-        tableOffsetV,
-        numYears,
-        rowHeight,
-        rowPadding,
-        cellPadding
-    );
-    // draw courses
+    drawGroupBackgrounds();
     for (let i = 0; i < courseInterface.length; i++) {
         courseInterface[i].show();
     }
-    // draw the majors
+    drawGroupLabels();
+    drawYearSeparators();
+    drawYearLabels();
     drawMajors();
-    // draw popup menu
     if (menuVisible) {
         courseMenu.show();
     }
@@ -105,38 +154,42 @@ function mousePressed() {
     } else {
         for (let i = 0; i < courseInterface.length; i++) {
             courseChange = courseInterface[i].clicked(mouseX, mouseY);
-            if (courseChange) {
-                break;
-            }
+            if (courseChange) break;
         }
     }
     if (courseChange) {
         updateAvailableCourses();
-        // do it twice to account for cascading changes
+        // a second pass catches cascading changes
         updateAvailableCourses();
     }
 }
 
+function yearColumnLeft(year) {
+    return canvasMargin + (year - 1) * yearColumnWidth;
+}
+
+function subColumnLeft(year, col) {
+    return yearColumnLeft(year) + (col - 1) * subColumnWidth;
+}
+
 function loadInterface() {
-    // make vertical offsets to account for major and minor selection
-    let yOffset = [];
-    for (let a = 0; a <= numYears; a++) {
-        yOffset[a] = 0;
-    }
-    let maxYloc = 0;
-    //load course data
+    courseInterface = [];
     for (let i = 0; i < programStructure.getRowCount(); i++) {
         let code = programStructure.getString(i, "code");
         let name = programStructure.getString(i, "name");
+        let year = int(programStructure.getString(i, "year"));
+        let row = int(programStructure.getString(i, "row"));
+        let column = int(programStructure.getString(i, "column"));
+        let widthSpan = int(programStructure.getString(i, "width") || "1");
+        let heightSpan = int(programStructure.getString(i, "height") || "1");
+        let menu = splitTokens(programStructure.getString(i, "menu"));
         let prereqs = splitTokens(programStructure.getString(i, "prerequisits"));
-        // get course details
-        if (code != null || code != "") {
+
+        // resolve name and prereqs from courseData when the structure row leaves them blank
+        if ((name == null || name == "") && code != null && code != "") {
             for (let j = 0; j < courseData.getRowCount(); j++) {
                 if (code == courseData.getString(j, "code")) {
-                    // names in the structure override course names
-                    if (name == null || name == "") {
-                        name = courseData.getString(j, "name");
-                    }
+                    name = courseData.getString(j, "name");
                     if (prereqs == null || prereqs.length == 0) {
                         prereqs = splitTokens(courseData.getString(j, "prerequisits"));
                     }
@@ -144,142 +197,203 @@ function loadInterface() {
                 }
             }
         }
-        let year = programStructure.getString(i, "year");
-        let column = programStructure.getString(i, "column");
-        let numColumns = programStructure.getString(i, "width");
-        let cellWidth = columnWidth * numColumns - cellPadding;
-        let cellHeight = rowHeight;
-        // make a button row half height
-        if (code == "majorSelect" || code == "minorSelect") {
-            cellHeight /= 2;
-            yOffset[year] = cellHeight;
+
+        let x, y, w, h, type;
+
+        if (year === -1) {
+            // tab-mounted selector: position taken from the matching region's tab
+            let region = groupRegions.find(g => g.tabSelectorCode === code);
+            type = (code === "majorSelect") ? "major" : "minor";
+            if (region) {
+                let t = groupTab(region);
+                x = t.x;
+                y = t.y;
+                w = t.w;
+                h = t.h;
+            } else {
+                x = -1000; y = -1000; w = 0; h = 0;
+            }
+        } else {
+            x = subColumnLeft(year, column) + gridCellPadding;
+            y = gridTop + (row - 1) * rowHeight + gridCellPadding;
+            w = subColumnWidth * widthSpan - 2 * gridCellPadding;
+            h = rowHeight * heightSpan - 2 * gridCellPadding;
+            type = "course";
+            if (code == "majorSelect") type = "major";
+            else if (code == "minorSelect") type = "minor";
         }
-        cellHeight -= cellPadding;
-        // calculate location
-        let xLoc = cellPadding + columnWidth * (column - 1) + tableOffsetH;
-        let yLoc =
-            tableOffsetV +
-            rowPadding +
-            (rowHeight + rowPadding) * (year - 1);
-        // add the offset to all previous years for button rows
-        for (let a = 0; a < year; a++) {
-            yLoc += yOffset[a];
-        }
-        // bump a button row to the next row
-        if (code == "majorSelect" || code == "minorSelect") {
-            yLoc += rowHeight + (rowPadding / 2);
-        }
-        // get the type of interaction
-        let type = "course";
-        if (code == "majorSelect") {
-            type = "major";
-        } else if (code == "minorSelect") {
-            type = "minor";
-        }
-        // record the maximum vertical location
-        if (yLoc > maxYloc) maxYloc = yLoc;
-        let menu = splitTokens(programStructure.getString(i, "menu"));
-        // put course data into an object array
+
         courseInterface[i] = new SelectBox(
-            i,
-            cellHeight,
-            cellWidth,
-            xLoc,
-            yLoc,
-            code,
-            type,
-            name,
-            year,
-            menu,
-            prereqs
+            i, h, w, x, y, code, type, name, year, menu, prereqs
         );
     }
-    return maxYloc + rowHeight;
 }
 
-function drawTopLabels(offsetH, offsetV, rPadding, cPadding) {
-    // draw semester box
+function groupRect(g) {
+    let xLeft = subColumnLeft(g.yearStart, g.colStart);
+    let xRight = subColumnLeft(g.yearEnd, g.colEnd) + subColumnWidth;
+    let yTop = gridTop + (g.rowStart - 1) * rowHeight;
+    let yBottom = gridTop + g.rowEnd * rowHeight;
+    let x = xLeft + (g.bleedLeft ? 0 : groupPadding);
+    let xR = xRight - (g.bleedRight ? 0 : groupPadding);
+    let y = yTop + (g.bleedTop ? 0 : groupPadding);
+    let yB = yBottom - (g.bleedBottom ? 0 : groupPadding);
+    return { x, y, w: xR - x, h: yB - y };
+}
+
+function groupTab(g) {
+    let r = groupRect(g);
+    let radius = rectRadius * 1.5;
+    let isSelector = !!g.tabSelectorCode;
+    let h = isSelector ? selectorTabHeight : tabHeight;
+    let w;
+    if (isSelector) {
+        // both selector tabs share a single width (capped by region width)
+        w = selectorTabWidthMax;
+    } else {
+        w = min(tabWidthMax, max(r.w * 0.55, 90));
+    }
+    w = min(w, r.w);
+    let x = r.x;
+    let y, tl, tr, br, bl;
+    if (g.labelPos == "top") {
+        y = r.y - h;
+        tl = radius;
+        tr = radius;
+        br = 0;
+        bl = 0;
+    } else {
+        y = r.y + r.h;
+        tl = 0;
+        tr = 0;
+        br = radius;
+        bl = radius;
+    }
+    return { x, y, w, h, tl, tr, br, bl };
+}
+
+function drawGroupBackgrounds() {
     noStroke();
-    fill(220, 220, 220);
-    rect(
-        offsetH + cPadding,
-        rPadding,
-        (width - (offsetH + cPadding)) / 2 - cPadding,
-        offsetV - cPadding, rectRadius
-    );
-    rect(
-        offsetH + cPadding * 2 + (width - (offsetH + cPadding)) / 2 - cPadding,
-        rPadding,
-        (width - (offsetH + cPadding)) / 2 - cPadding,
-        offsetV - cPadding, rectRadius
-    );
-    // draw text
+    let radius = rectRadius * 1.5;
+    for (let g of groupRegions) {
+        let r = groupRect(g);
+        let c = g.corners || [1, 1, 1, 1];
+        fill(g.color[0], g.color[1], g.color[2]);
+        rect(r.x, r.y, r.w, r.h, c[0] * radius, c[1] * radius, c[2] * radius, c[3] * radius);
+        if (g.label && g.label.length > 0) {
+            let t = groupTab(g);
+            rect(t.x, t.y, t.w, t.h, t.tl, t.tr, t.br, t.bl);
+        }
+    }
+}
+
+function getTabSelectorBox(code) {
+    for (let i = 0; i < courseInterface.length; i++) {
+        if (programStructure.getString(i, "code") === code) {
+            return courseInterface[i];
+        }
+    }
+    return null;
+}
+
+function selectorTabText(box) {
+    if (!box) return "";
+    let prefix;
+    if (box.code == null || box.code == "" ||
+        box.code == "majorSelect" || box.code == "minorSelect") {
+        prefix = "Select a";
+    } else if (box.type == "major") {
+        prefix = "Major";
+    } else if (box.type == "minor") {
+        prefix = "Minor";
+    } else {
+        prefix = box.code;
+    }
+    return prefix + "\n" + box.name;
+}
+
+function drawGroupLabels() {
+    noStroke();
+    textStyle(BOLD);
     textAlign(CENTER, CENTER);
-    textSize(width / 60);
-    fill(10, 10, 10);
-    noStroke();
-    text(topLabel1, offsetH + cPadding + ((canvasWidth - (offsetH + cPadding)) / 2 - cPadding) / 2, offsetV/2);
-    text(topLabel2, offsetH + cPadding * 2 + (canvasWidth - (offsetH + cPadding)) / 2 - cPadding + ((width - (offsetH + cPadding)) / 2 - cPadding) / 2, offsetV/2);
-}
+    for (let g of groupRegions) {
+        if (!g.label || g.label.length == 0) continue;
+        let t = groupTab(g);
+        fill(g.labelColor[0], g.labelColor[1], g.labelColor[2]);
 
-function drawYearLabels(offsetH, offsetV, years, rHeight, rPadding, cPadding) {
-    let lastYearNum = 0;
-    for (let course of courseInterface) {
-        // if it's not a button choice row
-        if (course.code != "majorSelect" && course.code != "minorSelect") {
-            // get year
-            let theYear = course.year;
-            if (theYear > lastYearNum) {
-                // draw box
-                noStroke();
-                fill(255, 10, 10);
-                rect(
-                    cPadding,
-                    course.y,
-                    offsetH - cPadding,
-                    course.cellHeight, rectRadius/2
-                );
-                // draw text
-                push();
-                translate(
-                    offsetH / 1.6,
-                    course.y + (course.cellHeight / 2)
-                );
-                rotate(radians(-90));
-                textAlign(CENTER, CENTER);
-                textSize(width / 60);
-                fill(255, 255, 255);
-                text("Year " + theYear, 0, 0);
-                pop();
-                lastYearNum = theYear;
+        let labelText = g.label;
+        let isSelector = false;
+        if (g.tabSelectorCode) {
+            let box = getTabSelectorBox(g.tabSelectorCode);
+            if (box) {
+                labelText = selectorTabText(box);
+                isSelector = true;
             }
         }
+
+        if (isSelector) {
+            textSize(width / 80);
+            let pad = 4;
+            text(labelText, t.x + pad, t.y + pad, t.w - 2 * pad, t.h - 2 * pad);
+        } else {
+            textSize(width / 65);
+            text(labelText, t.x + t.w / 2, t.y + t.h / 2);
+        }
+    }
+    textStyle(NORMAL);
+}
+
+function drawYearSeparators() {
+    push();
+    stroke(colSeparator[0], colSeparator[1], colSeparator[2]);
+    strokeWeight(1.5);
+    drawingContext.setLineDash([6, 5]);
+    for (let v = 0; v <= numYears; v++) {
+        let x = canvasMargin + v * yearColumnWidth;
+        line(x, gridTop - 4, x, yearLabelBottom + 4);
+    }
+    drawingContext.setLineDash([]);
+    pop();
+}
+
+function drawYearLabels() {
+    noStroke();
+    for (let v = 1; v <= numYears; v++) {
+        let x = yearColumnLeft(v) + 8;
+        let y = yearLabelTop;
+        let w = yearColumnWidth - 16;
+        let h = yearLabelHeight;
+        fill(colYearPill[0], colYearPill[1], colYearPill[2]);
+        rect(x, y, w, h, h / 2);
+        fill(colYearPillText[0], colYearPillText[1], colYearPillText[2]);
+        textAlign(CENTER, CENTER);
+        textSize(width / 55);
+        textStyle(BOLD);
+        text("year " + v, x + w / 2, y + h / 2);
+        textStyle(NORMAL);
     }
 }
 
 function drawMajors() {
-    let columnWidth = (canvasWidth - cellPadding - tableOffsetH) / numberMajors;
+    let columnWidth = (canvasWidth - 2 * canvasMargin) / numberMajors;
     let textPadding = 8;
-    let majorCount = 0;
     for (let i = 0; i < majorData.getRowCount(); i++) {
         if (majorData.getString(i, "code").substring(0, 5) == "MAJOR") {
-            let xLoc = cellPadding + (columnWidth * i) + tableOffsetH;
-            let yLoc = tableHeight + tablePadding;
-            // display major name
+            let xLoc = canvasMargin + columnWidth * i;
+            let yLoc = tableHeight;
             textAlign(LEFT, TOP);
             textSize(width / 60);
-            fill(255, 10, 10);
+            fill(225, 30, 30);
             text(
                 majorData.getString(i, "name"),
                 xLoc + textPadding,
                 yLoc + textPadding,
-                columnWidth - (2 * textPadding),
+                columnWidth - 2 * textPadding,
                 50
             );
-            // display core courses
             textAlign(LEFT);
             textSize(width / 80);
-            fill(255, 10, 10);
+            fill(225, 30, 30);
             let yShift = 60;
             text(
                 "Core Courses (complete all courses)",
@@ -293,33 +407,24 @@ function drawMajors() {
             for (let code of coreCodes) {
                 let theText = code;
                 fill(130, 160, 255);
-                // find course name in course data
                 for (let j = 0; j < courseData.getRowCount(); j++) {
                     if (courseData.getString(j, "code") == code) {
-                        theText += ' ' + courseData.getString(j, "name");
+                        theText += " " + courseData.getString(j, "name");
                         break;
                     }
                 }
-                // find course status in interface data
                 for (let course of courseInterface) {
                     if (course.code == code) {
                         if (course.status == COMPLETED) fill(0, 200, 0);
                         break;
                     }
                 }
-                text(
-                    theText,
-                    xLoc + textPadding,
-                    yLoc + yShift,
-                    columnWidth - 2 * textPadding,
-                    50
-                );
+                text(theText, xLoc + textPadding, yLoc + yShift, columnWidth - 2 * textPadding, 50);
                 yShift += 40;
             }
-            // display the option courses
             let optionCodes = splitTokens(majorData.getString(i, "options"));
             let numOptions = majorData.getString(i, "number");
-            fill(255, 10, 10);
+            fill(225, 30, 30);
             yShift += 10;
             text(
                 "Option Courses (complete " + numOptions + ")",
@@ -332,57 +437,40 @@ function drawMajors() {
             for (let option of optionCodes) {
                 let theText = option;
                 fill(130, 160, 255);
-                // find course name
                 for (let j = 0; j < courseData.getRowCount(); j++) {
                     if (courseData.getString(j, "code") == option) {
-                        theText += ' ' + courseData.getString(j, "name");
+                        theText += " " + courseData.getString(j, "name");
                         break;
                     }
                 }
-                // find course status in interface data
                 for (let course of courseInterface) {
                     if (course.code == option) {
                         if (course.status == COMPLETED) fill(0, 200, 0);
                         break;
                     }
                 }
-                text(
-                    theText,
-                    xLoc + textPadding,
-                    yLoc + yShift,
-                    columnWidth - 2 * textPadding,
-                    50
-                );
+                text(theText, xLoc + textPadding, yLoc + yShift, columnWidth - 2 * textPadding, 50);
                 yShift += 40;
             }
-            majorCount++;
         }
     }
 }
 
 function updateAvailableCourses() {
-    // check each course
     for (let i = 0; i < courseInterface.length; i++) {
         let avail = false;
         let equiv = false;
-        // get the prereqs from the interface
-        // prereqs are loaded into the interface at startup
         let thePrereqs = courseInterface[i].prereqs;
-        // check the prerequisits
         if (thePrereqs == null || thePrereqs.length == 0) {
-            // no prereqs so if not available make it available
             avail = true;
         } else {
-            // check each of the prereqs
             let numCompleted = 0;
             for (let j = 0; j < thePrereqs.length; j++) {
                 let prereqCourse = thePrereqs[j];
                 let foundPrereq = false;
-                // split up the OR prerequisits
                 let multiplePrereq = split(prereqCourse, "||");
                 for (let m = 0; m < multiplePrereq.length; m++) {
                     let theCourse = multiplePrereq[m];
-                    // look for the prereq in completed courses
                     for (let k = 0; k < courseInterface.length; k++) {
                         if (
                             courseInterface[k].code == theCourse &&
@@ -394,33 +482,26 @@ function updateAvailableCourses() {
                         }
                     }
                 }
-                if (foundPrereq) {
-                    numCompleted++;
-                }
+                if (foundPrereq) numCompleted++;
             }
-            if (numCompleted == thePrereqs.length) {
-                avail = true;
-            } else {
-                avail = false;
-            }
+            avail = (numCompleted == thePrereqs.length);
         }
 
-        // check to see if equivalent course has been completed
-        let theCourse = courseInterface.code;
+        let theCourse = courseInterface[i].code;
         let theEquivalents;
-        // check course data for equivalents
         for (let j = 0; j < courseData.getRowCount(); j++) {
             if (courseData.getString(j, "code") == theCourse) {
-                theEquivalents = split(courseData.getString(j, "equivalents"));
+                let equivStr = courseData.getString(j, "equivalents");
+                if (equivStr != null && equivStr.length > 0) {
+                    theEquivalents = splitTokens(equivStr);
+                }
                 break;
             }
         }
         if (theEquivalents != null) {
-            // check each of the equivalents
             for (let j = 0; j < theEquivalents.length; j++) {
                 let equivalentCourse = theEquivalents[j];
                 let foundEquivalent = false;
-                // look for the equivalent in complete courses
                 for (let k = 0; k < courseInterface.length; k++) {
                     if (
                         courseInterface[k].code == equivalentCourse &&
@@ -438,7 +519,6 @@ function updateAvailableCourses() {
         }
         if (!avail) {
             courseInterface[i].status = NOTAVAIL;
-            // reset the interface element if its not a single course
             let code = programStructure.getString(i, "code");
             courseInterface[i].code = code;
             if (code == null || code == "") {

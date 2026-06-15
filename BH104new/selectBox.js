@@ -31,6 +31,8 @@ class SelectBox {
     }
 
     show() {
+        // Tab-mounted selectors render via drawGroupLabels — skip the cell visuals.
+        if (this.year === -1 || this.year === "-1") return;
         let theText = "";
         if (this.code == null || this.code == "" || this.code == "majorSelect" || this.code == "minorSelect") {
             theText = "Select a";
