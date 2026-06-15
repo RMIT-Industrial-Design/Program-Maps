@@ -1,24 +1,45 @@
-// v0.11
-// responds to Caroline's requests
-// All subjects as popup menu
-// Semester headings changed
-// sets Canvas size based on number of years in table
+// v0.12
+// Layout rewrite: years run horizontally across the canvas.
+// Group regions (Foundation, Core, Studio, Major, Minor, Capstone) are
+// hardcoded coloured backgrounds. Year labels are red pills at the bottom,
+// with dashed red vertical separators between years.
+// majorSelect / minorSelect buttons live in a thin top bar.
+// The majors info panel below the grid is preserved (to be revisited).
 
+let programStructure;
 let courseData;
-let courses = [];
-let tableOffsetH = 30;
-let tableOffsetV = 35;
-let rowHeight = 120; // for multi-selection in popup menu
-// let rowHeight = 280; // for multi-selection in table
-let rowPadding = 4;
-let cellPadding = 4;
-let numYears;
+let majorData;
+let courseInterface = [];
 
-// headings
-let topLabel1 = "Semester 1";
-let topLabel2 = "Semester 2";
+let canvasWidth = 1000; // Canvas LMS restricts iframe content to 1000
+let canvasMargin = 12;
+let topGap = 60; // room above the grid for Capstone top tab
+let cellPadding = 5;
+let gridCellPadding = 10; // inset between course box and its region edge
+let rectRadius = 8;
+let groupPadding = 2;
+let tabHeight = 50;
+let tabWidthMax = 170;
+let selectorTabHeight = 50;
+let selectorTabWidthMax = 240;
+let yearLabelHeight = 36;
+let yearLabelGap = 60; // clear the bottom tabs above the year pills
+let tablePadding = 25;
 
-// popup menu
+let numYears = 4;
+let rowsPerYear = 4;
+let rowHeight = 105;
+
+let yearColumnWidth;
+let subColumnWidth;
+let gridTop;
+let gridBottom;
+let yearLabelTop;
+let yearLabelBottom;
+let tableHeight;
+let numberMajors;
+let majorsHeight;
+
 let courseMenu;
 let menuVisible = false;
 
@@ -27,486 +48,584 @@ const AVAILABLE = 1;
 const COMPLETED = 2;
 const EQUIVALENT = 3;
 
+const colFoundation = [208, 212, 232];
+const colCore = [252, 232, 130];
+const colStudio = [252, 232, 130];
+const colMajor = [208, 212, 232];
+const colMinor = [220, 220, 220];
+const colCapstone = [225, 30, 30];
+const colYearPill = [225, 30, 30];
+const colYearPillText = [255, 255, 255];
+const colSeparator = [225, 30, 30];
+
+// Group regions span year ranges (yearStart..yearEnd). Each region is one
+// rectangle; the L-shaped Major region is composed of two adjacent rects whose
+// shared edges have corner = 0. `corners` is [tl, tr, br, bl] flags — 1
+// rounded, 0 square. A rect with a label has its tab-side corner squared so
+// the tab joins flush with the region.
+const groupRegions = [
+    // Foundation (Y1 col 1) — br squared because the tab fills the full bottom edge
+    { yearStart: 1, yearEnd: 1, rowStart: 1, rowEnd: 4, colStart: 1, colEnd: 1,
+      color: colFoundation, corners: [1, 1, 0, 0],
+      label: "Foundation", labelPos: "bottom", labelColor: [40, 50, 110] },
+    // Core (Y1 col 2) — bleeds right to join Studio; br squared (full-width tab)
+    { yearStart: 1, yearEnd: 1, rowStart: 1, rowEnd: 4, colStart: 2, colEnd: 2,
+      color: colCore, corners: [1, 0, 0, 0], bleedRight: true,
+      label: "Core", labelPos: "bottom", labelColor: [120, 100, 30] },
+    // Studio (Y2-Y3 rows 1-2) — bleeds left to meet Core
+    { yearStart: 2, yearEnd: 3, rowStart: 1, rowEnd: 2, colStart: 1, colEnd: 2,
+      color: colStudio, corners: [0, 1, 1, 0], bleedLeft: true },
+    // Major part 1: row-3 strip across Y2-Y4 (top of L)
+    { yearStart: 2, yearEnd: 4, rowStart: 3, rowEnd: 3, colStart: 1, colEnd: 2,
+      color: colMajor, corners: [1, 1, 0, 1] },
+    // Major part 2: Y4 rows 3-4 column (foot of L), carries the label
+    // br squared because the selector tab fills the full bottom edge
+    { yearStart: 4, yearEnd: 4, rowStart: 3, rowEnd: 4, colStart: 1, colEnd: 2,
+      color: colMajor, corners: [0, 1, 0, 0],
+      label: "Major", labelPos: "bottom", labelColor: [40, 50, 110],
+      tabSelectorCode: "majorSelect" },
+    // Minor (Y2-Y3 row 4)
+    { yearStart: 2, yearEnd: 3, rowStart: 4, rowEnd: 4, colStart: 1, colEnd: 2,
+      color: colMinor, corners: [1, 1, 1, 0],
+      label: "Minor", labelPos: "bottom", labelColor: [80, 80, 80],
+      tabSelectorCode: "minorSelect" },
+    // Capstone (Y4 rows 1-2) — top tab
+    { yearStart: 4, yearEnd: 4, rowStart: 1, rowEnd: 2, colStart: 1, colEnd: 2,
+      color: colCapstone, corners: [0, 1, 1, 1],
+      label: "Capstone", labelPos: "top", labelColor: [255, 255, 255] },
+];
+
 function preload() {
-  courseData = loadTable("courseData.csv", "csv", "header");
+    // CSV cache buster — without it, browsers cache the CSVs and edits don't show up
+    let cb = "?t=" + Date.now();
+    programStructure = loadTable("structure.csv" + cb, "csv", "header");
+    courseData = loadTable("courses.csv" + cb, "csv", "header");
+    majorData = loadTable("majors.csv" + cb, "csv", "header");
 }
 
 function setup() {
-  // get height of table
-  numYears = max(courseData.getColumn("year"));
-  let canvasHeight = tableOffsetV + (rowHeight + rowPadding) * numYears;
-  let canvasWidth = 1000; // the Canvas LMS restricts iframe content to 1000
+    yearColumnWidth = (canvasWidth - 2 * canvasMargin) / numYears;
+    subColumnWidth = yearColumnWidth / 2;
+    gridTop = canvasMargin + topGap;
+    gridBottom = gridTop + rowsPerYear * rowHeight;
+    yearLabelTop = gridBottom + yearLabelGap;
+    yearLabelBottom = yearLabelTop + yearLabelHeight;
+    tableHeight = yearLabelBottom + tablePadding;
 
-  createCanvas(canvasWidth, canvasHeight);
+    loadInterface();
 
-  loadCourseDetails();
+    let canvasHeight = tableHeight;
+    createCanvas(canvasWidth, canvasHeight);
 
-  updateAvailableCourses();
+    updateAvailableCourses();
+    courseMenu = new Menu();
 
-  courseMenu = new Menu();
-
-  // print(courseData);
-  // print(courses);
+    buildMajorsPanel();
+    updateMajorsPanelHighlights();
 }
 
 function draw() {
-  background(255);
-  // draw top labels
-  drawTopLabels(tableOffsetH, tableOffsetV, rowPadding, cellPadding);
-  // draw year labels
-  drawYearLabels(
-    tableOffsetH,
-    tableOffsetV,
-    numYears,
-    rowHeight,
-    rowPadding,
-    cellPadding
-  );
-  // draw courses
-  for (let i = 0; i < courses.length; i++) {
-    courses[i].show();
-  }
-  // draw popup menu
-  if (menuVisible) {
-    courseMenu.show();
-  }
+    background(255);
+    drawGroupBackgrounds();
+    for (let i = 0; i < courseInterface.length; i++) {
+        courseInterface[i].show();
+    }
+    drawGroupLabels();
+    drawYearSeparators();
+    drawYearLabels();
+    if (menuVisible) {
+        courseMenu.show();
+    }
 }
 
 function mousePressed() {
-  let courseChange = false;
-  if (menuVisible) {
-    courseChange = courseMenu.clicked(mouseX, mouseY);
-  } else {
-    for (let i = 0; i < courses.length; i++) {
-      courseChange = courses[i].clicked(mouseX, mouseY);
-      if (courseChange) {
-        break;
-      }
+    let courseChange = false;
+    if (menuVisible) {
+        courseChange = courseMenu.clicked(mouseX, mouseY);
+    } else {
+        for (let i = 0; i < courseInterface.length; i++) {
+            courseChange = courseInterface[i].clicked(mouseX, mouseY);
+            if (courseChange) break;
+        }
     }
-  }
-  if (courseChange) {
-    updateAvailableCourses();
-    // do it twice to fix a refresh bug
-    updateAvailableCourses();
-  }
+    if (courseChange) {
+        updateAvailableCourses();
+        // a second pass catches cascading changes
+        updateAvailableCourses();
+        updateMajorsPanelHighlights();
+    }
 }
 
-function loadCourseDetails() {
-  //get table data
-  let tableWidth = max(courseData.getColumn("column"));
-
-  //load course data
-  for (let i = 0; i < courseData.getRowCount(); i++) {
-    let code = courseData.getString(i, "code");
-    let name = courseData.getString(i, "name");
-    let year = courseData.getString(i, "year");
-    let column = courseData.getString(i, "column");
-    let points = courseData.getString(i, "points");
-    let option = courseData.getString(i, "option");
-    let number = courseData.getString(i, "number");
-    let prerequisits = splitTokens(courseData.getString(i, "prerequisits"));
-    let equivalents = splitTokens(courseData.getString(i, "equivalents"));
-    let menu = splitTokens(courseData.getString(i, "menu"));
-    // put course data into an object array
-    courses[i] = new Course(
-      i,
-      tableOffsetH,
-      tableOffsetV,
-      rowHeight,
-      rowPadding,
-      cellPadding,
-      code,
-      name,
-      year,
-      column,
-      points,
-      option,
-      number,
-      prerequisits,
-      equivalents,
-      menu,
-      tableWidth
-    );
-  }
-  // print(courses);
+function yearColumnLeft(year) {
+    return canvasMargin + (year - 1) * yearColumnWidth;
 }
 
-function drawTopLabels(offsetH, offsetV, rPadding, cPadding) {
-  // draw semester box
-  noStroke();
-  fill(220, 220, 220);
-  rect(
-    offsetH + cPadding,
-    rPadding,
-    (width - (offsetH + cPadding))/2 - cPadding,
-    offsetV - cPadding
-  );
-  rect(
-    offsetH + cPadding * 2 + (width - (offsetH + cPadding))/2 - cPadding,
-    rPadding,
-    (width - (offsetH + cPadding))/2 - cPadding,
-    offsetV - cPadding
-  );
-  // draw text
-  textAlign(CENTER, CENTER);
-  textSize(width / 60);
-  fill(10, 10, 10);
-  noStroke();
-  text(topLabel1, offsetH + cPadding + ((width - (offsetH + cPadding))/2 - cPadding)/2, rPadding + 15);
-  text(topLabel2, offsetH + cPadding * 2 + (width - (offsetH + cPadding))/2 - cPadding + ((width - (offsetH + cPadding))/2 - cPadding)/2, rPadding + 15);
+function subColumnLeft(year, col) {
+    return yearColumnLeft(year) + (col - 1) * subColumnWidth;
 }
 
-function drawYearLabels(offsetH, offsetV, years, rHeight, rPadding, cPadding) {
-  for (let i = 1; i <= years; i++) {
-    // draw box
+function loadInterface() {
+    courseInterface = [];
+    for (let i = 0; i < programStructure.getRowCount(); i++) {
+        let code = programStructure.getString(i, "code");
+        let name = programStructure.getString(i, "name");
+        let year = int(programStructure.getString(i, "year"));
+        let row = int(programStructure.getString(i, "row"));
+        let column = int(programStructure.getString(i, "column"));
+        let widthSpan = int(programStructure.getString(i, "width") || "1");
+        let heightSpan = int(programStructure.getString(i, "height") || "1");
+        let menu = splitTokens(programStructure.getString(i, "menu"));
+        let prereqs = splitTokens(programStructure.getString(i, "prerequisits"));
+
+        // resolve name and prereqs from courseData when the structure row leaves them blank
+        if ((name == null || name == "") && code != null && code != "") {
+            for (let j = 0; j < courseData.getRowCount(); j++) {
+                if (code == courseData.getString(j, "code")) {
+                    name = courseData.getString(j, "name");
+                    if (prereqs == null || prereqs.length == 0) {
+                        prereqs = splitTokens(courseData.getString(j, "prerequisits"));
+                    }
+                    break;
+                }
+            }
+        }
+
+        let x, y, w, h, type;
+
+        if (year === -1) {
+            // tab-mounted selector: position taken from the matching region's tab
+            let region = groupRegions.find(g => g.tabSelectorCode === code);
+            type = (code === "majorSelect") ? "major" : "minor";
+            if (region) {
+                let t = groupTab(region);
+                x = t.x;
+                y = t.y;
+                w = t.w;
+                h = t.h;
+            } else {
+                x = -1000; y = -1000; w = 0; h = 0;
+            }
+        } else {
+            x = subColumnLeft(year, column) + gridCellPadding;
+            y = gridTop + (row - 1) * rowHeight + gridCellPadding;
+            w = subColumnWidth * widthSpan - 2 * gridCellPadding;
+            h = rowHeight * heightSpan - 2 * gridCellPadding;
+            type = "course";
+            if (code == "majorSelect") type = "major";
+            else if (code == "minorSelect") type = "minor";
+        }
+
+        courseInterface[i] = new SelectBox(
+            i, h, w, x, y, code, type, name, year, menu, prereqs
+        );
+    }
+}
+
+function groupRect(g) {
+    let xLeft = subColumnLeft(g.yearStart, g.colStart);
+    let xRight = subColumnLeft(g.yearEnd, g.colEnd) + subColumnWidth;
+    let yTop = gridTop + (g.rowStart - 1) * rowHeight;
+    let yBottom = gridTop + g.rowEnd * rowHeight;
+    let x = xLeft + (g.bleedLeft ? 0 : groupPadding);
+    let xR = xRight - (g.bleedRight ? 0 : groupPadding);
+    let y = yTop + (g.bleedTop ? 0 : groupPadding);
+    let yB = yBottom - (g.bleedBottom ? 0 : groupPadding);
+    return { x, y, w: xR - x, h: yB - y };
+}
+
+function groupTab(g) {
+    let r = groupRect(g);
+    let radius = rectRadius * 1.5;
+    let isSelector = !!g.tabSelectorCode;
+    let h = isSelector ? selectorTabHeight : tabHeight;
+    let w;
+    if (isSelector) {
+        // both selector tabs share a single width (capped by region width)
+        w = selectorTabWidthMax;
+    } else if (r.w < 140) {
+        // narrow column-width regions: tab spans the full region
+        w = r.w;
+    } else {
+        w = min(tabWidthMax, max(r.w * 0.55, 90));
+    }
+    w = min(w, r.w);
+    let x = r.x;
+    let y, tl, tr, br, bl;
+    if (g.labelPos == "top") {
+        y = r.y - h;
+        tl = radius;
+        tr = radius;
+        br = 0;
+        bl = 0;
+    } else {
+        y = r.y + r.h;
+        tl = 0;
+        tr = 0;
+        br = radius;
+        bl = radius;
+    }
+    return { x, y, w, h, tl, tr, br, bl };
+}
+
+function drawGroupBackgrounds() {
     noStroke();
-    fill(255, 10, 10);
-    rect(
-      cPadding,
-      offsetV + rPadding + (rPadding + rHeight) * (i - 1),
-      offsetH - cPadding,
-      rHeight - cPadding
-    );
-    // draw text
-    push();
-    translate(
-      offsetH / 1.6,
-      offsetH + (rHeight + rPadding) / 2 + (rHeight + rPadding) * (i - 1)
-    );
-    rotate(radians(-90));
+    let radius = rectRadius * 1.5;
+    for (let g of groupRegions) {
+        let r = groupRect(g);
+        let c = g.corners || [1, 1, 1, 1];
+        fill(g.color[0], g.color[1], g.color[2]);
+        rect(r.x, r.y, r.w, r.h, c[0] * radius, c[1] * radius, c[2] * radius, c[3] * radius);
+        if (g.label && g.label.length > 0) {
+            let t = groupTab(g);
+            rect(t.x, t.y, t.w, t.h, t.tl, t.tr, t.br, t.bl);
+        }
+    }
+}
+
+function getTabSelectorBox(code) {
+    for (let i = 0; i < courseInterface.length; i++) {
+        if (programStructure.getString(i, "code") === code) {
+            return courseInterface[i];
+        }
+    }
+    return null;
+}
+
+function selectorTabText(box) {
+    if (!box) return "";
+    let prefix;
+    if (box.code == null || box.code == "" ||
+        box.code == "majorSelect" || box.code == "minorSelect") {
+        prefix = "Select a";
+    } else if (box.type == "major") {
+        prefix = "Major";
+    } else if (box.type == "minor") {
+        prefix = "Minor";
+    } else {
+        prefix = box.code;
+    }
+    return prefix + "\n" + box.name;
+}
+
+function drawGroupLabels() {
+    noStroke();
+    textStyle(BOLD);
     textAlign(CENTER, CENTER);
-    textSize(width / 60);
-    fill(255, 255, 255);
-    text("Year " + i, 0, 0);
+    for (let g of groupRegions) {
+        if (!g.label || g.label.length == 0) continue;
+        let t = groupTab(g);
+        fill(g.labelColor[0], g.labelColor[1], g.labelColor[2]);
+
+        let labelText = g.label;
+        let isSelector = false;
+        if (g.tabSelectorCode) {
+            let box = getTabSelectorBox(g.tabSelectorCode);
+            if (box) {
+                labelText = selectorTabText(box);
+                isSelector = true;
+            }
+        }
+
+        if (isSelector) {
+            textSize(width / 80);
+            textAlign(CENTER, TOP);
+            let pad = 3;
+            text(labelText, t.x + pad, t.y + pad, t.w - 2 * pad, t.h - 2 * pad);
+        } else {
+            textSize(width / 65);
+            textAlign(CENTER, CENTER);
+            text(labelText, t.x + t.w / 2, t.y + t.h / 2);
+        }
+    }
+    textStyle(NORMAL);
+}
+
+function drawYearSeparators() {
+    push();
+    stroke(colSeparator[0], colSeparator[1], colSeparator[2]);
+    strokeWeight(1.5);
+    drawingContext.setLineDash([6, 5]);
+    for (let v = 0; v <= numYears; v++) {
+        let x = canvasMargin + v * yearColumnWidth;
+        line(x, gridTop - 4, x, yearLabelBottom + 4);
+    }
+    drawingContext.setLineDash([]);
     pop();
-  }
+}
+
+function drawYearLabels() {
+    noStroke();
+    for (let v = 1; v <= numYears; v++) {
+        let x = yearColumnLeft(v) + 8;
+        let y = yearLabelTop;
+        let w = yearColumnWidth - 16;
+        let h = yearLabelHeight;
+        fill(colYearPill[0], colYearPill[1], colYearPill[2]);
+        rect(x, y, w, h, h / 2);
+        fill(colYearPillText[0], colYearPillText[1], colYearPillText[2]);
+        textAlign(CENTER, CENTER);
+        textSize(width / 55);
+        textStyle(BOLD);
+        text("year " + v, x + w / 2, y + h / 2);
+        textStyle(NORMAL);
+    }
+}
+
+function courseNameByCode(code) {
+    for (let j = 0; j < courseData.getRowCount(); j++) {
+        if (courseData.getString(j, "code") === code) {
+            return courseData.getString(j, "name");
+        }
+    }
+    return "";
+}
+
+function makeCourseLi(code) {
+    let li = document.createElement("li");
+    li.className = "course";
+    li.dataset.code = code;
+    let codeSpan = document.createElement("span");
+    codeSpan.className = "code";
+    codeSpan.textContent = code;
+    let nameSpan = document.createElement("span");
+    nameSpan.className = "name";
+    nameSpan.textContent = courseNameByCode(code);
+    li.appendChild(codeSpan);
+    li.appendChild(nameSpan);
+    return li;
+}
+
+function findMajorDataIdx(code) {
+    for (let j = 0; j < majorData.getRowCount(); j++) {
+        if (majorData.getString(j, "code") === code) return j;
+    }
+    return -1;
+}
+
+function buildMajorsPanel() {
+    // If a minor shares a name with one of the majors, that column substitutes
+    // the minor's content. (MINOR5 / OPEN2 / UNIELECTIVES don't match any
+    // major name and so are not shown in the panel.)
+    let minorBox = (typeof getTabSelectorBox === "function") ? getTabSelectorBox("minorSelect") : null;
+    let selectedMinorCode = (minorBox && minorBox.code && minorBox.code !== "minorSelect") ? minorBox.code : null;
+    let selectedMinorName = "";
+    if (selectedMinorCode) {
+        let idx = findMajorDataIdx(selectedMinorCode);
+        if (idx >= 0) selectedMinorName = majorData.getString(idx, "name");
+    }
+
+    let container = document.querySelector("main") || document.body;
+    let panel = document.getElementById("majors-panel");
+    if (!panel) {
+        panel = document.createElement("div");
+        panel.id = "majors-panel";
+        container.appendChild(panel);
+    }
+    panel.innerHTML = "";
+
+    for (let i = 0; i < majorData.getRowCount(); i++) {
+        let majorCode = majorData.getString(i, "code");
+        if (majorCode.substring(0, 5) !== "MAJOR") continue;
+        let majorName = majorData.getString(i, "name");
+
+        // Decide whose content this column should render
+        let displayIdx = i;
+        let isMinor = false;
+        if (selectedMinorName && majorName === selectedMinorName) {
+            let minorIdx = findMajorDataIdx(selectedMinorCode);
+            if (minorIdx >= 0) { displayIdx = minorIdx; isMinor = true; }
+        }
+        let displayCode = majorData.getString(displayIdx, "code");
+
+        let col = document.createElement("div");
+        col.className = "major-column" + (isMinor ? " as-minor" : "");
+        col.dataset.code = displayCode;
+
+        let nameEl = document.createElement("h3");
+        nameEl.className = "major-name";
+        nameEl.textContent = majorData.getString(displayIdx, "name");
+        col.appendChild(nameEl);
+
+        let coreCodes = splitTokens(majorData.getString(displayIdx, "core"));
+        let coreHeader = document.createElement("p");
+        coreHeader.className = "section-header";
+        coreHeader.textContent = isMinor
+            ? "Minor Courses (complete any 4)"
+            : "Major Core Courses (complete all courses)";
+        col.appendChild(coreHeader);
+
+        let coreList = document.createElement("ul");
+        coreList.className = "course-list";
+        for (let c of coreCodes) coreList.appendChild(makeCourseLi(c));
+        col.appendChild(coreList);
+
+        let optionCodes = splitTokens(majorData.getString(displayIdx, "options"));
+        if (optionCodes.length > 0) {
+            let optHeader = document.createElement("p");
+            optHeader.className = "section-header";
+            optHeader.textContent =
+                "Major Optional Courses (complete any " +
+                majorData.getString(displayIdx, "number") + ")";
+            col.appendChild(optHeader);
+
+            let optList = document.createElement("ul");
+            optList.className = "course-list";
+            for (let c of optionCodes) optList.appendChild(makeCourseLi(c));
+            col.appendChild(optList);
+        }
+
+        panel.appendChild(col);
+    }
+}
+
+let panelLastMajorCode = null;
+let panelLastMinorCode = null;
+
+function updateMajorsPanelHighlights() {
+    let majorBox = (typeof getTabSelectorBox === "function") ? getTabSelectorBox("majorSelect") : null;
+    let minorBox = (typeof getTabSelectorBox === "function") ? getTabSelectorBox("minorSelect") : null;
+    let selectedMajor = (majorBox && majorBox.code && majorBox.code !== "majorSelect") ? majorBox.code : null;
+    let selectedMinor = (minorBox && minorBox.code && minorBox.code !== "minorSelect") ? minorBox.code : null;
+
+    // Rebuild the panel only when the major/minor selection has changed
+    if (selectedMajor !== panelLastMajorCode || selectedMinor !== panelLastMinorCode) {
+        panelLastMajorCode = selectedMajor;
+        panelLastMinorCode = selectedMinor;
+        buildMajorsPanel();
+    }
+
+    let panel = document.getElementById("majors-panel");
+    if (!panel) return;
+
+    // Split completions by where they were taken: courses completed via a
+    // Major slot (menu MAJOR or MAJOR-OPT in structure.csv) count toward the
+    // major; courses completed via a Minor slot (menu MINOR) count toward the
+    // minor. A course can't double-count toward both.
+    let majorCompleted = new Set();
+    let minorCompleted = new Set();
+    for (let i = 0; i < courseInterface.length; i++) {
+        let c = courseInterface[i];
+        if (!c || c.status !== COMPLETED || !c.code) continue;
+        let menuTag = programStructure.getString(i, "menu");
+        if (menuTag === "MAJOR" || menuTag === "MAJOR-OPT") {
+            majorCompleted.add(c.code);
+        } else if (menuTag === "MINOR") {
+            minorCompleted.add(c.code);
+        }
+    }
+
+    // OPEN escapes the per-column scoping: the chosen major/minor doesn't
+    // pin highlights to a specific column, so paint major-bucket courses
+    // across every column where they appear (and likewise for minors).
+    let majorIsOpen = selectedMajor === "OPEN1";
+    let minorIsOpen = selectedMinor === "OPEN2";
+
+    panel.querySelectorAll(".course[data-code]").forEach(el => {
+        let col = el.closest(".major-column");
+        let isMinorColumn = col.classList.contains("as-minor");
+        let colCode = col.dataset.code;
+        let code = el.dataset.code;
+
+        let highlight = false;
+        if (majorCompleted.has(code)) {
+            if (majorIsOpen) highlight = true;
+            else if (!isMinorColumn && colCode === selectedMajor) highlight = true;
+        }
+        if (minorCompleted.has(code)) {
+            if (minorIsOpen) highlight = true;
+            else if (isMinorColumn && colCode === selectedMinor) highlight = true;
+        }
+        el.classList.toggle("completed", highlight);
+    });
+
+    // A column matches whichever code it's currently showing — major code by
+    // default, minor code when substituted.
+    panel.querySelectorAll(".major-column").forEach(col => {
+        let code = col.dataset.code;
+        let selected = (selectedMajor && code === selectedMajor) ||
+                       (selectedMinor && code === selectedMinor);
+        col.classList.toggle("selected", selected);
+    });
 }
 
 function updateAvailableCourses() {
-  // check each course
-  for (let i = 0; i < courses.length; i++) {
-    let avail = false;
-    let equiv = false;
-
-    // check the prerequisits
-    if (courses[i].prereqs == null) {
-      // no perreqs so if not available make it available
-      avail = true;
-    } else {
-      // check each of the prerequs
-      let thePrereqs = courses[i].prereqs;
-      let numCompleted = 0;
-      for (let j = 0; j < thePrereqs.length; j++) {
-        let prereqCourse = thePrereqs[j];
-        let foundPrereq = false;
-        // split up the OR prerequisits
-        let multiplePrereq = split(prereqCourse, "||");
-        for (let m = 0; m < multiplePrereq.length; m++) {
-          let theCourse = multiplePrereq[m];
-          // look for the prereq in completed courses
-          for (let k = 0; k < courses.length; k++) {
-            if (
-              courses[k].code == theCourse &&
-              (courses[k].status == COMPLETED ||
-                courses[k].status == EQUIVALENT)
-            ) {
-              foundPrereq = true;
-              break;
-            }
-          }
-        }
-        if (foundPrereq) {
-          numCompleted++;
-        }
-      }
-      if (numCompleted == thePrereqs.length) {
-        avail = true;
-      } else {
-        avail = false;
-      }
-    }
-
-    // check to see if equivalent course has been completed
-    if (courses[i].equivalents != null) {
-      // check each of the equivalents
-      let theEquivalents = courses[i].equivalents;
-      for (let j = 0; j < theEquivalents.length; j++) {
-        let equivalentCourse = theEquivalents[j];
-        let foundEquivalent = false;
-        // look for the equivalent in complete courses
-        for (let k = 0; k < courses.length; k++) {
-          if (
-            courses[k].code == equivalentCourse &&
-            courses[k].status == COMPLETED
-          ) {
-            foundEquivalent = true;
-            break;
-          }
-        }
-        if (foundEquivalent) {
-          equiv = true;
-          break;
-        }
-      }
-    }
-    if (!avail) {
-      courses[i].status = NOTAVAIL;
-      //reset the display
-      courses[i].code = courseData.getString(i, "code");
-      courses[i].name = courseData.getString(i, "name");
-    } else {
-      if (courses[i].status != COMPLETED) {
-        if (avail && equiv) {
-          courses[i].status = EQUIVALENT;
-        } else if (avail) {
-          courses[i].status = AVAILABLE;
-        }
-      }
-    }
-  }
-}
-
-class Menu {
-  constructor() {
-    this.x = 0;
-    this.y = 0;
-    this.cellWidth = 300;
-    this.cellHeight = 20;
-    this.codes = [];
-    this.names = [];
-    this.avail = [];
-    this.ref = -1;
-  }
-
-  update(x, y, codes, ref) {
-    this.x = x;
-    this.y = y;
-    // empty arrays
-    this.codes = [];
-    this.names = [];
-    this.avail = [];
-    // deep copy the codes
-    for (let i = 0; i < codes.length; i++) {
-      this.codes[i] = codes[i];
-    }
-    this.ref = ref;
-    // collect the menu item names
-    let longestName = 0;
-    for (let i = 0; i < codes.length; i++) {
-      // collect the menu item names
-      for (let j = 0; j < courseData.getRowCount(); j++) {
-        if (courseData.getString(j, "code") == this.codes[i]) {
-          let theName = courseData.getString(j, "name");
-          longestName = max(longestName, theName.length);
-          this.names[i] = theName;
-          break;
-        }
-      }
-      if (this.codes[i] == "University") {
-        this.avail[i] = true;
-      } else {
-        // check the menu item availability
-        for (let j = 0; j < courses.length; j++) {
-          if (courses[j].code == this.codes[i]) {
-            if (courses[j].status == COMPLETED) {
-              this.avail[i] = false;
-            } else {
-              this.avail[i] = true;
-            }
-            break;
-          }
-        }
-      }
-    }
-    // add a 'none' option
-    this.codes.push("none");
-    this.names.push("");
-    this.avail.push(true);
-    // adjust menu width to suit text
-    this.cellWidth = longestName * 6 + 80;
-  }
-
-  show() {
-    noStroke();
-    // draw grey over canvas
-    fill(10, 10, 10, 100);
-    rect(0, 0, width, height);
-    // check menu is on screen
-    this.x = min(this.x, width - this.cellWidth);
-    this.y = min(this.y, height - this.cellHeight * this.codes.length);
-    // draw menu boxes
-    for (let i = 0; i < this.codes.length; i++) {
-      // draw menu boxes
-      if (this.avail[i]) {
-        fill(0, 200, 0);
-      } else {
-        fill(170, 170, 170);
-      }
-      stroke(100, 100, 100);
-      rect(
-        this.x,
-        this.y + this.cellHeight * i,
-        this.cellWidth,
-        this.cellHeight
-      );
-      // write menu text
-      noStroke();
-      let textPadding = 5;
-      textAlign(LEFT, CENTER);
-      textSize(width / 80);
-      fill(50);
-      text(
-        this.codes[i] + " " + this.names[i],
-        this.x + textPadding,
-        this.y + this.cellHeight * i,
-        this.cellWidth,
-        this.cellHeight
-      );
-    }
-  }
-
-  clicked(clickX, clickY) {
-    let menuHeight = this.cellHeight * this.codes.length;
-    let theCode;
-    let theName;
-    let theAvail;
-    if (
-      clickX > this.x &&
-      clickX < this.x + this.cellWidth &&
-      clickY > this.y &&
-      clickY < this.y + menuHeight
-    ) {
-      // check each row for menu selection
-      for (let i = 0; i < this.codes.length; i++) {
-        if (
-          clickY > this.y + this.cellHeight * i &&
-          clickY < this.y + this.cellHeight * (i + 1)
-        ) {
-          theCode = this.codes[i];
-          theName = this.names[i];
-          theAvail = this.avail[i];
-          break;
-        }
-      }
-      if (theAvail) {
-        // action menu selection
-        if (theCode == "none") {
-          courses[this.ref].code = courseData.getString(this.ref, "code");
-          courses[this.ref].name = courseData.getString(this.ref, "name");
-          courses[this.ref].status = NOTAVAIL;
+    for (let i = 0; i < courseInterface.length; i++) {
+        let avail = false;
+        let equiv = false;
+        let thePrereqs = courseInterface[i].prereqs;
+        if (thePrereqs == null || thePrereqs.length == 0) {
+            avail = true;
         } else {
-          courses[this.ref].code = theCode;
-          courses[this.ref].name = theName;
-          courses[this.ref].status = COMPLETED;
+            let numCompleted = 0;
+            for (let j = 0; j < thePrereqs.length; j++) {
+                let prereqCourse = thePrereqs[j];
+                let foundPrereq = false;
+                let multiplePrereq = split(prereqCourse, "||");
+                for (let m = 0; m < multiplePrereq.length; m++) {
+                    let theCourse = multiplePrereq[m];
+                    for (let k = 0; k < courseInterface.length; k++) {
+                        if (
+                            courseInterface[k].code == theCourse &&
+                            (courseInterface[k].status == COMPLETED ||
+                                courseInterface[k].status == EQUIVALENT)
+                        ) {
+                            foundPrereq = true;
+                            break;
+                        }
+                    }
+                }
+                if (foundPrereq) numCompleted++;
+            }
+            avail = (numCompleted == thePrereqs.length);
         }
-        // hide menu
-        menuVisible = false;
-        return true;
-      }
-    } else {
-      // hide menu
-      menuVisible = false;
-    }
-  }
-}
 
-class Course {
-  constructor(
-    ref,
-    offsetH,
-    offsetV,
-    rHeight,
-    rPadding,
-    cPadding,
-    code,
-    name,
-    year,
-    column,
-    points,
-    option,
-    number,
-    prereqs,
-    equivalents,
-    menu,
-    tableWidth
-  ) {
-    this.ref = ref;
-    let columnWidth = (width - cPadding - offsetH) / tableWidth;
-    this.cellHeight = rHeight / number - cPadding;
-    this.code = code;
-    this.name = name;
-    this.year = year;
-    this.points = points;
-    this.prereqs = prereqs;
-    this.equivalents = equivalents;
-    this.menu = menu;
-    this.x = cPadding + columnWidth * (column - 1) + offsetH;
-    this.y =
-      offsetV +
-      rPadding +
-      (rowHeight + rPadding) * (year - 1) +
-      (this.cellHeight + cPadding) * (option - 1);
-    if (points == 12) {
-      this.cellWidth = columnWidth - cPadding;
-    } else {
-      this.cellWidth = columnWidth * 2 - cPadding;
-    }
-    this.status = NOTAVAIL;
-  }
-
-  show() {
-    let theText;
-    if (this.code == null || this.code == "") {
-      theText = "Select a";
-    } else {
-      theText = this.code;
-    }
-    let textPadding = 8;
-    if (this.status == EQUIVALENT) {
-      fill(150, 200, 150);
-    } else if (this.status == COMPLETED) {
-      fill(0, 200, 0);
-    } else if (this.status == AVAILABLE) {
-      fill(130, 160, 255);
-    } else {
-      fill(170, 170, 170);
-    }
-    // draw box
-    noStroke();
-    rect(this.x, this.y, this.cellWidth, this.cellHeight);
-    // display course details
-    textAlign(CENTER, CENTER);
-    textSize(width / 80);
-    fill(50);
-    text(
-      theText + "\n" + this.name,
-      this.x + textPadding,
-      this.y + textPadding,
-      this.cellWidth - 2 * textPadding,
-      this.cellHeight - 2 * textPadding
-    );
-  }
-
-  clicked(clickX, clickY) {
-    if (
-      clickX > this.x &&
-      clickX < this.x + this.cellWidth &&
-      clickY > this.y &&
-      clickY < this.y + this.cellHeight
-    ) {
-      if (this.menu.length > 0) {
-        if (this.status == AVAILABLE || this.status == COMPLETED) {
-          courseMenu.update(clickX, clickY, this.menu, this.ref);
-          menuVisible = true;
+        let theCourse = courseInterface[i].code;
+        let theEquivalents;
+        for (let j = 0; j < courseData.getRowCount(); j++) {
+            if (courseData.getString(j, "code") == theCourse) {
+                let equivStr = courseData.getString(j, "equivalents");
+                if (equivStr != null && equivStr.length > 0) {
+                    theEquivalents = splitTokens(equivStr);
+                }
+                break;
+            }
         }
-      } else if (this.status == AVAILABLE || this.status == EQUIVALENT) {
-        this.status = COMPLETED;
-      } else if (this.status == COMPLETED) {
-        this.status = AVAILABLE;
-      }
-      return true;
-    } else {
-      return false;
+        if (theEquivalents != null) {
+            for (let j = 0; j < theEquivalents.length; j++) {
+                let equivalentCourse = theEquivalents[j];
+                let foundEquivalent = false;
+                for (let k = 0; k < courseInterface.length; k++) {
+                    if (
+                        courseInterface[k].code == equivalentCourse &&
+                        courseInterface[k].status == COMPLETED
+                    ) {
+                        foundEquivalent = true;
+                        break;
+                    }
+                }
+                if (foundEquivalent) {
+                    equiv = true;
+                    break;
+                }
+            }
+        }
+        if (!avail) {
+            courseInterface[i].status = NOTAVAIL;
+            let code = programStructure.getString(i, "code");
+            courseInterface[i].code = code;
+            if (code == null || code == "") {
+                courseInterface[i].name = programStructure.getString(i, "name");
+                courseInterface[i].prereqs = splitTokens(programStructure.getString(i, "prerequisits"));
+                courseInterface[i].menu = splitTokens(programStructure.getString(i, "menu"));
+            }
+        } else {
+            if (courseInterface[i].status != COMPLETED) {
+                if (avail && equiv) {
+                    courseInterface[i].status = EQUIVALENT;
+                } else if (avail) {
+                    courseInterface[i].status = AVAILABLE;
+                }
+            }
+        }
     }
-  }
 }
