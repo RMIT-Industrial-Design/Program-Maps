@@ -9,6 +9,7 @@
 let programStructure;
 let courseData;
 let majorData;
+let programData;
 let courseInterface = [];
 
 let canvasWidth = 1000; // Canvas LMS restricts iframe content to 1000
@@ -101,6 +102,7 @@ function preload() {
     programStructure = loadTable("structure.csv" + cb, "csv", "header");
     courseData = loadTable("courses.csv" + cb, "csv", "header");
     majorData = loadTable("majors.csv" + cb, "csv", "header");
+    programData = loadTable("program.csv" + cb, "csv", "header");
 }
 
 function setup() {
@@ -113,6 +115,10 @@ function setup() {
     tableHeight = yearLabelBottom + tablePadding;
 
     loadInterface();
+
+    // Inject the program title above the canvas. Appending to <main> before
+    // createCanvas() runs puts the title earlier in the DOM than the canvas.
+    insertProgramTitle();
 
     let canvasHeight = tableHeight;
     createCanvas(canvasWidth, canvasHeight);
@@ -369,6 +375,23 @@ function drawYearLabels() {
         text("year " + v, x + w / 2, y + h / 2);
         textStyle(NORMAL);
     }
+}
+
+function insertProgramTitle() {
+    if (!programData || programData.getRowCount() === 0) return;
+    let code = programData.getString(0, "code");
+    let name = programData.getString(0, "name");
+    // "Program Map" is appended in HTML so the CSV can stay program-agnostic
+    let titleText = [code, name, "Program Map"].filter(s => s && s.length).join(" ");
+    if (!titleText) return;
+    let container = document.querySelector("main") || document.body;
+    let h1 = document.getElementById("program-title");
+    if (!h1) {
+        h1 = document.createElement("h1");
+        h1.id = "program-title";
+        container.appendChild(h1);
+    }
+    h1.textContent = titleText;
 }
 
 function courseNameByCode(code) {
