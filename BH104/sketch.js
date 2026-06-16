@@ -177,7 +177,7 @@ function loadInterface() {
         let name = programStructure.getString(i, "name");
         let year = int(programStructure.getString(i, "year"));
         let row = int(programStructure.getString(i, "row"));
-        let column = int(programStructure.getString(i, "column"));
+        let semester = int(programStructure.getString(i, "semester"));
         let widthSpan = int(programStructure.getString(i, "width") || "1");
         let heightSpan = int(programStructure.getString(i, "height") || "1");
         let menu = splitTokens(programStructure.getString(i, "menu"));
@@ -212,7 +212,7 @@ function loadInterface() {
                 x = -1000; y = -1000; w = 0; h = 0;
             }
         } else {
-            x = subColumnLeft(year, column) + gridCellPadding;
+            x = subColumnLeft(year, semester) + gridCellPadding;
             y = gridTop + (row - 1) * rowHeight + gridCellPadding;
             w = subColumnWidth * widthSpan - 2 * gridCellPadding;
             h = rowHeight * heightSpan - 2 * gridCellPadding;

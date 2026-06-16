@@ -1,4 +1,4 @@
-code,name,year,row,column,width,height,menu,prerequisits
+code,name,year,row,semester,width,height,menu,prerequisits
 majorSelect,Major,-1,0,0,0,0,MAJOR1 MAJOR2 MAJOR3 MAJOR4 OPEN1,
 minorSelect,Minor,-1,0,0,0,0,MINOR1 MINOR2 MINOR3 MINOR4 MINOR5 OPEN2 UNIELECTIVES,
 GRAP1041,,1,1,1,1,1,,
